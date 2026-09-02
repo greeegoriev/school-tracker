@@ -1,5 +1,5 @@
-import { initializeApp } from "https://gstatic.com";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://gstatic.com";
+import { initializeApp } from "https://jsdelivr.net";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://jsdelivr.net";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBibVt41A2cU1_zA7efXLP5mxz-uo8T-2w",
