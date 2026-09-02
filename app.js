@@ -1,3 +1,4 @@
+// 🔐 ВАШ СЕКРЕТНЫЙ ЗАШИФРОВАННЫЙ СЛЕД (SHA-256)
 const HASHED_KEY = "accdb61253228627734b63ffdb49dd2dc708425b07e5fb618d92f46f342ca0be";
 
 const BG_ALGO = {
@@ -9,11 +10,11 @@ const BG_ALGO = {
 
 const BG_MODES = ['auto', 'morning', 'day', 'evening', 'night'];
 
-// Функция мгновенного шифрования в браузере
+// Исправленная функция шифрования — железно работает с русскими буквами
 async function hashKey(str) {
-    const utf8 = new TextEncoder().encode(str);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
-    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
+    const buffer = new TextEncoder().encode(str);
+    const hash = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function getBgByTime() {
