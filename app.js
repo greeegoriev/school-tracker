@@ -1,11 +1,10 @@
 const HASHED_KEY = "accdb61253228627734b63ffdb49dd2dc708425b07e5fb618d92f46f342ca0be";
 
-// 🖼️ МЕСТО ДЛЯ ВАШИХ КАРТИНОК
 const BG_ALGO = {
-    morning: "https://picsum.photos",
-    day: "https://picsum.photos",
-    evening: "https://picsum.photos",
-    night: "https://picsum.photos"
+    morning: "https://unsplash.com",
+    day: "https://unsplash.com",
+    evening: "https://unsplash.com",
+    night: "https://unsplash.com"
 };
 
 const BG_MODES = ['auto', 'morning', 'day', 'evening', 'night'];
@@ -80,6 +79,7 @@ async function init() {
     document.getElementById('loading-screen').style.display = 'none';
     if (await checkAccess()) {
         document.getElementById('app-screen').style.display = 'block';
+        document.getElementById('nav-panel').style.display = 'flex';
         initUX();
         updateTracker();
         setInterval(updateTracker, 1000);
@@ -114,9 +114,17 @@ function timeToMinutes(timeStr) {
     return hours * 60 + minutes;
 }
 
+// ⏳ УМНЫЙ ПЕРЕВОД В ЧАСЫ, МИНУТЫ И СЕКУНДЫ
 function formatRemainingTime(secondsTotal) {
-    const minutes = Math.floor(secondsTotal / 60);
+    const hours = Math.floor(secondsTotal / 3600);
+    const minutes = Math.floor((secondsTotal % 3600) / 60);
     const seconds = secondsTotal % 60;
+    
+    const secStr = (seconds < 10 ? "0" : "") + seconds + " сек.";
+    
+    if (hours > 0) {
+        return hours + " ч. " + minutes + " мин. <br><span style='font-size:24px; opacity:0.7; font-weight:700;'>" + secStr + "</span>";
+    }
     return minutes + " мин. " + (seconds < 10 ? "0" : "") + seconds + " сек.";
 }
 
@@ -128,7 +136,7 @@ function setStatusColors(type, secondsLeft = 9999) {
             root.style.setProperty('--border-glow', 'rgba(255, 159, 28, 0.4)');
         } else {
             root.style.setProperty('--status-color', 'var(--accent)');
-            root.style.setProperty('--border-glow', 'rgba(0, 113, 227, 0.15)');
+            root.style.setProperty('--border-glow', 'rgba(255, 255, 255, 0.6)');
         }
     } else if (type === 'break') {
         root.style.setProperty('--status-color', '#34c759');
@@ -204,14 +212,14 @@ function updateTracker() {
 
 function processChildSchedule(totalCurrentSeconds, todayLessons, lessonNumbers, schoolEndSec) {
     const prefix = 'c1';
-    const firstLessonNum = lessonNumbers[0];
+    const firstLessonNum = lessonNumbers;
     const firstSlot = timeSlots.find(s => s.number === firstLessonNum);
     const schoolStartSec = timeToMinutes(firstSlot.start) * 60;
 
     if (totalCurrentSeconds < schoolStartSec) {
         const diff = schoolStartSec - totalCurrentSeconds;
         document.getElementById(prefix + '-title').innerText = "До начала занятий (" + todayLessons[firstLessonNum] + ")";
-        document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);
+        document.getElementById(prefix + '-timer').innerHTML = formatRemainingTime(diff);
         document.getElementById(prefix + '-break').innerText = "Первый урок в " + firstSlot.start;
         setStatusColors('rest');
         return;
