@@ -5,40 +5,128 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Расписание Кирилла</title>
     <style>
-        :root { --bg-color: #f4f6f9; --card-bg: #ffffff; --text-main: #333333; --text-muted: #666666; --accent: #4a90e2; --success: #2ec4b6; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; justify-content: center; }
-        #auth-screen { text-align: center; background: var(--card-bg); padding: 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 400px; width: 100%; display: none; }
-        #auth-screen h2 { margin-bottom: 10px; color: var(--text-main); }
-        #auth-screen p { color: var(--text-muted); margin-bottom: 25px; font-size: 14px; }
-        #login-btn { background: #ffffff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        #app-screen { display: none; width: 100%; max-width: 500px; flex-direction: column; align-items: center; }
-        h1 { margin-bottom: 5px; font-size: 24px; text-align: center; }
-        .logout-area { margin-bottom: 20px; }
-        .logout-btn { background: none; border: none; color: #e63946; cursor: pointer; text-decoration: underline; font-size: 14px; }
-        .child-card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border-top: 5px solid var(--accent); width: 100%; box-sizing: border-box; }
-        .child-name { font-size: 22px; font-weight: bold; margin-bottom: 15px; color: var(--accent); text-align: center; }
-        .status-box { background: #f8f9fa; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center; }
-        .current-lesson { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-        .timer { font-size: 32px; font-weight: bold; color: var(--success); margin: 10px 0; }
+        :root {
+            --bg-overlay: rgba(244, 246, 249, 0.95);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --text-main: #222222;
+            --text-muted: #555555;
+            --accent: #4a90e2;
+            --status-color: #2ec4b6;
+            --border-glow: transparent;
+        }
+        body.dark-theme {
+            --bg-overlay: rgba(18, 18, 18, 0.85);
+            --card-bg: rgba(30, 30, 30, 0.85);
+            --text-main: #f5f5f5;
+            --text-muted: #aaaaaa;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            justify-content: center;
+            background-color: #f4f6f9;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            transition: background 0.5s ease;
+        }
+        .main-wrapper {
+            background: var(--bg-overlay);
+            padding: 20px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 460px;
+            box-sizing: border-box;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .controls-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .theme-btn {
+            background: var(--card-bg);
+            border: 1px solid rgba(0,0,0,0.1);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .bg-select {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 8px;
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+        }
+        .child-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 2px solid var(--border-glow);
+            transition: border 0.5s ease;
+        }
+        .child-name { font-size: 24px; font-weight: 800; margin-bottom: 15px; color: var(--accent); text-align: center; }
+        .status-box { background: rgba(0,0,0,0.03); border-radius: 16px; padding: 15px; text-align: center; }
+        .current-lesson { font-size: 18px; font-weight: 700; }
+        .timer { font-size: 36px; font-weight: 900; color: var(--status-color); margin: 8px 0; transition: color 0.5s ease; }
         .next-break { font-size: 14px; color: var(--text-muted); line-height: 1.4; white-space: pre-line; }
-        .day-info { text-align: center; margin-bottom: 20px; font-weight: 500; color: var(--text-muted); }
-        #loading-screen { font-size: 18px; color: var(--text-muted); }
+        .day-info { text-align: center; margin-bottom: 15px; font-weight: 600; color: var(--text-muted); font-size: 14px; }
+        
+        .full-schedule-box {
+            margin-top: 20px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 15px;
+        }
+        .schedule-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; text-align: center; color: var(--accent); }
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 5px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-size: 13px;
+        }
+        .schedule-item.active-now {
+            background: rgba(46, 196, 182, 0.15);
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .schedule-item:last-child { border-bottom: none; }
+        #loading-screen { font-size: 18px; color: #666666; text-align: center; }
     </style>
 </head>
 <body>
-    <div id="loading-screen">Загрузка системы времени и авторизации...</div>
-    <div id="auth-screen">
-        <h2>Вход в трекер</h2>
-        <p id="auth-message">Доступ только для членов семьи</p>
-        <button id="login-btn">
-            <img src="https://gstatic.com" width="20" alt="Google">
-            Войти через Google
-        </button>
-    </div>
-    <div id="app-screen">
-        <h1>🏫 Школьный трекер времени</h1>
-        <div class="logout-area"><button class="logout-btn" id="logout-btn">Выйти из аккаунта</button></div>
-        <div class="day-info" id="current-time-display">Загрузка времени...</div>
+
+    <div id="loading-screen">Загрузка системы стиля и времени...</div>
+
+    <div class="main-wrapper" id="app-screen" style="display:none;">
+        <div class="controls-panel">
+            <button class="theme-btn" id="theme-toggle">🌓 Тема</button>
+            <select class="bg-select" id="bg-selector">
+                <option value="none">Без фона</option>
+                <option value="panel">🌆 Панельки 90-х</option>
+                <option value="cars">🚗 Ретро авто</option>
+                <option value="mc">🧱 Майнкрафт</option>
+            </select>
+        </div>
+
+        <div class="day-info" id="current-time-display">--:--</div>
+
         <div class="child-card">
             <div class="child-name">Кирилл</div>
             <div class="status-box">
@@ -47,8 +135,13 @@
                 <div class="next-break" id="c1-break">Перемена: --</div>
             </div>
         </div>
+
+        <div class="full-schedule-box">
+            <div class="schedule-title" id="list-title">Расписание на сегодня</div>
+            <div id="schedule-list"></div>
+        </div>
     </div>
-    <!-- Запускаем локальный скрипт -->
+
     <script type="module" src="app.js"></script>
 </body>
 </html>
