@@ -1,5 +1,5 @@
-// 🔐 ВАШ СЕКРЕТНЫЙ ЗАШИФРОВАННЫЙ СЛЕД (SHA-256)
-const HASHED_KEY = "accdb61253228627734b63ffdb49dd2dc708425b07e5fb618d92f46f342ca0be";
+// 🔑 ТЕКСТОВЫЙ ПАРОЛЬ В ОТКРЫТОМ ВИДЕ (БЕЗ ХЭШЕЙ)
+const PLAIN_PASSWORD = "школа34-2026";
 
 const BG_ALGO = {
     morning: "https://unsplash.com",
@@ -9,13 +9,6 @@ const BG_ALGO = {
 };
 
 const BG_MODES = ['auto', 'morning', 'day', 'evening', 'night'];
-
-// Исправленная функция шифрования — железно работает с русскими буквами
-async function hashKey(str) {
-    const buffer = new TextEncoder().encode(str);
-    const hash = await crypto.subtle.digest('SHA-256', buffer);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
 
 function getBgByTime() {
     const hr = new Date().getHours();
@@ -56,19 +49,11 @@ function initUX() {
     }
 
     if(bgContainer) {
-        if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== 'function') {
-            window.addEventListener('deviceorientation', (e) => {
-                const x = Math.min(Math.max(e.gamma, -15), 15) * 0.8;
-                const y = Math.min(Math.max(e.beta - 45, -15), 15) * 0.8;
-                bgContainer.style.transform = "translate3d(" + x + "px, " + y + "px, 0) scale(1.05)";
-            });
-        } else {
-            window.addEventListener('mousemove', (e) => {
-                const x = (e.clientX - window.innerWidth / 2) * 0.03;
-                const y = (e.clientY - window.innerHeight / 2) * 0.03;
-                bgContainer.style.transform = "translate3d(" + x + "px, " + y + "px, 0) scale(1.05)";
-            });
-        }
+        window.addEventListener('mousemove', (e) => {
+            const x = (e.clientX - window.innerWidth / 2) * 0.03;
+            const y = (e.clientY - window.innerHeight / 2) * 0.03;
+            bgContainer.style.transform = "translate3d(" + x + "px, " + y + "px, 0) scale(1.05)";
+        });
     }
 }
 
@@ -77,6 +62,8 @@ const appContent = document.getElementById('app-content');
 const navPanel = document.getElementById('nav-panel');
 const passField = document.getElementById('pass-field');
 const submitBtn = document.getElementById('submit-pass');
+const toggleEyeBtn = document.getElementById('toggle-visible');
+const eyeIcon = document.getElementById('eye-icon');
 
 function startApp() {
     if(loginForm) loginForm.style.display = 'none';
@@ -87,26 +74,40 @@ function startApp() {
     setInterval(updateTracker, 1000);
 }
 
-// Проверка: если хэш совпадает со старой сессией — пускаем сразу
-if (localStorage.getItem('school_access_hash') === HASHED_KEY) {
-    startApp();
-} else {
-    if(submitBtn && passField) {
-        submitBtn.addEventListener('click', async () => {
-            const inputHash = await hashKey(passField.value); // Шифруем введенный текст
-            if (inputHash === HASHED_KEY) {
-                localStorage.setItem('school_access_hash', HASHED_KEY);
-                startApp();
-            } else {
-                alert('Неверный семейный пароль!');
-                passField.value = '';
-            }
-        });
-        passField.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') submitBtn.click();
-        });
+if (toggleEyeBtn && passField && eyeIcon) {
+    toggleEyeBtn.addEventListener('click', () => {
+        if (passField.type === 'password') {
+            passField.type = 'text';
+            eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+        } else {
+            passField.type = 'password';
+            eyeIcon.innerHTML = '<svg id="eye-icon" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.49 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+        }
+    });
+}
+
+function init() {
+    if (localStorage.getItem('school_plain_pass') === PLAIN_PASSWORD) {
+        startApp();
+    } else {
+        if(loginForm) loginForm.style.display = 'flex';
+        if(submitBtn && passField) {
+            submitBtn.addEventListener('click', () => {
+                if (passField.value === PLAIN_PASSWORD) {
+                    localStorage.setItem('school_plain_pass', PLAIN_PASSWORD);
+                    startApp();
+                } else {
+                    alert('Неверный семейный пароль!');
+                    passField.value = '';
+                }
+            });
+            passField.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') submitBtn.click();
+            });
+        }
     }
 }
+init();
 
 const timeSlots = [
     { number: 1, start: "08:30", end: "09:10", breakAfter: 10 },
@@ -127,11 +128,6 @@ const weeklyLessons = {
     4: { 3: "Биология (каб. 203)", 4: "Англ.язык (каб. 305)", 5: "История (каб. 210)", 6: "Русский язык (каб. 308)", 7: "Химия (каб. 316)" },
     5: { 3: "Химия (каб. 316)", 4: "Алгебра (каб. 313)", 5: "Русский язык (каб. 308)", 6: "Англ.язык (каб. 305)", 7: "Литература (каб. 308)", 8: "Геометрия (каб. 313)" }
 };
-
-function timeToMinutes(timeStr) {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours * 60 + minutes;
-}
 
 function formatRemainingTime(secondsTotal) {
     const hours = Math.floor(secondsTotal / 3600);
@@ -182,102 +178,4 @@ function renderScheduleTable(dayNum, isTomorrow) {
             html += '<div class="schedule-item' + activeClass + '"><span class="lesson-text">' + slot.number + '. ' + name + '</span><span class="time-text">' + slot.start + ' - ' + slot.end + '</span></div>';
         }
     });
-    if (listContainer) listContainer.innerHTML = html;
-}
-
-function updateTracker() {
-    const now = new Date();
-    let dayOfWeek = now.getDay();
-    const currentTimeDisplay = document.getElementById('current-time-display');
-    if(currentTimeDisplay) currentTimeDisplay.innerText = now.toLocaleDateString('ru-RU', { weekday: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-        document.getElementById('c1-title').innerText = "Выходные дни";
-        document.getElementById('c1-timer').innerText = "🎉";
-        document.getElementById('c1-break').innerText = "Отдых";
-        setStatusColors('rest');
-        renderScheduleTable(1, true);
-        return;
-    }
-
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const totalCurrentSeconds = currentMinutes * 60 + now.getSeconds();
-    const todayLessons = weeklyLessons[dayOfWeek] || {};
-    const lessonNumbers = Object.keys(todayLessons).map(Number).sort((a,b)=>a-b);
-    const lastLessonNum = lessonNumbers[lessonNumbers.length - 1];
-    const lastSlot = timeSlots.find(s => s.number === lastLessonNum);
-    const schoolEndSec = timeToMinutes(lastSlot.end) * 60;
-
-    if (totalCurrentSeconds >= schoolEndSec) {
-        let nextDay = dayOfWeek + 1;
-        if (nextDay > 5) nextDay = 1;
-        renderScheduleTable(nextDay, true);
-    } else {
-        renderScheduleTable(dayOfWeek, false);
-    }
-    processChildSchedule(totalCurrentSeconds, todayLessons, lessonNumbers, schoolEndSec);
-}
-
-function processChildSchedule(totalCurrentSeconds, todayLessons, lessonNumbers, schoolEndSec) {
-    const prefix = 'c1';
-    const firstLessonNum = lessonNumbers;
-    const firstSlot = timeSlots.find(s => s.number === firstLessonNum);
-    const schoolStartSec = timeToMinutes(firstSlot.start) * 60;
-
-    if (totalCurrentSeconds < schoolStartSec) {
-        const diff = schoolStartSec - totalCurrentSeconds;
-        document.getElementById(prefix + '-title').innerText = "До начала занятий (" + todayLessons[firstLessonNum] + ")";
-        document.getElementById(prefix + '-timer').innerHTML = formatRemainingTime(diff);
-        document.getElementById(prefix + '-break').innerText = "Первый урок в " + firstSlot.start;
-        setStatusColors('rest');
-        return;
-    }
-
-    if (totalCurrentSeconds >= schoolEndSec) {
-        document.getElementById(prefix + '-title').innerText = "Уроки окончены";
-        document.getElementById(prefix + '-timer').innerText = "🏡 Домой";
-        document.getElementById(prefix + '-break').innerText = "Все занятия на сегодня завершены";
-        setStatusColors('rest');
-        return;
-    }
-
-    for (let i = 0; i < timeSlots.length; i++) {
-        const slot = timeSlots[i];
-        const slotStartSec = timeToMinutes(slot.start) * 60;
-        const slotEndSec = timeToMinutes(slot.end) * 60;
-        const lessonName = todayLessons[slot.number];
-
-        if (totalCurrentSeconds >= slotStartSec && totalCurrentSeconds < slotEndSec) {
-            const diff = slotEndSec - totalCurrentSeconds;
-            if (lessonName) {
-                document.getElementById(prefix + '-title').innerText = "Сейчас: " + lessonName;
-                document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);
-                const nextLessonNum = lessonNumbers.find(num => num > slot.number);
-                document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Перемена: " + slot.breakAfter + " мин. \nДалее: " + todayLessons[nextLessonNum] : "Перемена: " + slot.breakAfter + " мин. (Последний урок!)";
-                setStatusColors('lesson', diff);
-            } else {
-                document.getElementById(prefix + '-title').innerText = "Свободное время (Окно)";
-                document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);
-                const nextLessonNum = lessonNumbers.find(num => num > slot.number);
-                document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Далее: " + todayLessons[nextLessonNum] : "Скоро домой";
-                setStatusColors('rest');
-            }
-            return;
-        }
-
-        if (i < timeSlots.length - 1) {
-            const nextSlot = timeSlots[i + 1];
-            const nextSlotStartSec = timeToMinutes(nextSlot.start) * 60;
-
-            if (totalCurrentSeconds >= slotEndSec && totalCurrentSeconds < nextSlotStartSec) {
-                const diff = nextSlotStartSec - totalCurrentSeconds;
-                const nextLessonNum = lessonNumbers.find(num => num > slot.number);
-                document.getElementById(prefix + '-title').innerText = "Идет перемена";
-                document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);
-                document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Далее: " + todayLessons[nextLessonNum] : "Идем домой!";
-                setStatusColors('break');
-                return;
-            }
-        }
-    }
-}
+    if (listContainer) listContainer.innerHTML = html;}function updateTracker() {const now = new Date();let dayOfWeek = now.getDay();const currentTimeDisplay = document.getElementById('current-time-display');if(currentTimeDisplay) currentTimeDisplay.innerText = now.toLocaleDateString('ru-RU', { weekday: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit' });if (dayOfWeek === 0 || dayOfWeek === 6) {document.getElementById('c1-title').innerText = "Выходные дни";document.getElementById('c1-timer').innerText = "🎉";document.getElementById('c1-break').innerText = "Отдых";setStatusColors('rest');renderScheduleTable(1, true);return;}const currentMinutes = now.getHours() * 60 + now.getMinutes();const totalCurrentSeconds = currentMinutes * 60 + now.getSeconds();const todayLessons = weeklyLessons[dayOfWeek] || {};const lessonNumbers = Object.keys(todayLessons).map(Number).sort((a,b)=>a-b);const lastLessonNum = lessonNumbers[lessonNumbers.length - 1];const lastSlot = timeSlots.find(s => s.number === lastLessonNum);const schoolEndSec = timeToMinutes(lastSlot.end) * 60;if (totalCurrentSeconds >= schoolEndSec) {let nextDay = dayOfWeek + 1;if (nextDay > 5) nextDay = 1;renderScheduleTable(nextDay, true);} else {renderScheduleTable(dayOfWeek, false);}processChildSchedule(totalCurrentSeconds, todayLessons, lessonNumbers, schoolEndSec);}function processChildSchedule(totalCurrentSeconds, todayLessons, lessonNumbers, schoolEndSec) {const prefix = 'c1';const firstLessonNum = lessonNumbers;const firstSlot = timeSlots.find(s => s.number === firstLessonNum);const schoolStartSec = timeToMinutes(firstSlot.start) * 60;if (totalCurrentSeconds < schoolStartSec) {const diff = schoolStartSec - totalCurrentSeconds;document.getElementById(prefix + '-title').innerText = "До начала занятий (" + todayLessons[firstLessonNum] + ")";document.getElementById(prefix + '-timer').innerHTML = formatRemainingTime(diff);document.getElementById(prefix + '-break').innerText = "Первый урок в " + firstSlot.start;setStatusColors('rest');return;}if (totalCurrentSeconds >= schoolEndSec) {document.getElementById(prefix + '-title').innerText = "Уроки окончены";document.getElementById(prefix + '-timer').innerText = "🏡 Домой";document.getElementById(prefix + '-break').innerText = "Все занятия на сегодня завершены";setStatusColors('rest');return;}for (let i = 0; i < timeSlots.length; i++) {const slot = timeSlots[i];const slotStartSec = timeToMinutes(slot.start) * 60;const slotEndSec = timeToMinutes(slot.end) * 60;const lessonName = todayLessons[slot.number];if (totalCurrentSeconds >= slotStartSec && totalCurrentSeconds < slotEndSec) {const diff = slotEndSec - totalCurrentSeconds;if (lessonName) {document.getElementById(prefix + '-title').innerText = "Сейчас: " + lessonName;document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);const nextLessonNum = lessonNumbers.find(num => num > slot.number);document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Перемена: " + slot.breakAfter + " мин. \nДалее: " + todayLessons[nextLessonNum] : "Перемена: " + slot.breakAfter + " мин. (Последний урок!)";setStatusColors('lesson', diff);} else {document.getElementById(prefix + '-title').innerText = "Свободное время (Окно)";document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);const nextLessonNum = lessonNumbers.find(num => num > slot.number);document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Далее: " + todayLessons[nextLessonNum] : "Скоро домой";setStatusColors('rest');}return;}if (i < timeSlots.length - 1) {const nextSlot = timeSlots[i + 1];const nextSlotStartSec = timeToMinutes(nextSlot.start) * 60;if (totalCurrentSeconds >= slotEndSec && totalCurrentSeconds < nextSlotStartSec) {const diff = nextSlotStartSec - totalCurrentSeconds;const nextLessonNum = lessonNumbers.find(num => num > slot.number);document.getElementById(prefix + '-title').innerText = "Идет перемена";document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Далее: " + todayLessons[nextLessonNum] : "Идем домой!";setStatusColors('break');return;}}}}
