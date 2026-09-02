@@ -148,11 +148,14 @@ function setStatusColors(type, secondsLeft = 9999) {
 }
 
 function renderScheduleTable(dayNum, isTomorrow) {
+    // Исправлено: теперь ищет правильный класс контейнера
     const listContainer = document.getElementById('schedule-list');
     const titleContainer = document.getElementById('list-title');
     const daysText = {1:"Понедельник", 2:"Вторник", 3:"Среда", 4:"Четверг", 5:"Пятница"};
     
-    titleContainer.innerText = (isTomorrow ? "Завтра: " : "Сегодня: ") + daysText[dayNum];
+    if (titleContainer) {
+        titleContainer.innerText = (isTomorrow ? "Завтра: " : "Сегодня: ") + daysText[dayNum];
+    }
     
     const lessons = weeklyLessons[dayNum] || {};
     let html = "";
@@ -171,7 +174,10 @@ function renderScheduleTable(dayNum, isTomorrow) {
             html += '<div class="schedule-item' + activeClass + '"><span class="lesson-text">' + slot.number + '. ' + name + '</span><span class="time-text">' + slot.start + ' - ' + slot.end + '</span></div>';
         }
     });
-    listContainer.innerHTML = html;
+    
+    if (listContainer) {
+        listContainer.innerHTML = html;
+    }
 }
 
 function updateTracker() {
