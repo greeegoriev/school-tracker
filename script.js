@@ -67,15 +67,35 @@ function resizeCanvas() { canvas.width = window.innerWidth * 1.1; canvas.height 
 
 function generateFluidBackground() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const darkPalettes = [['#0f172a', '#1e1b4b', '#2e1065'], ['#022c22', '#064e3b', '#022c22'], ['#1e1b4b', '#311042', '#0f172a'], ['#1c1917', '#44403c', '#0c0a09']];
-    const lightPalettes = [['#f8fafc', '#f1f5f9', '#cbd5e1'], ['#f4f4f9', '#e8e8f4', '#c8c8e6'], ['#fef7e0', '#fcebc4', '#f9d27d']];
-    const list = isDark ? darkPalettes : lightPalettes; const palette = list[Math.floor(Math.random() * list.length)];
+    const darkPalettes = [
+        ['#0f172a', '#1e1b4b', '#2e1065'], 
+        ['#022c22', '#064e3b', '#011510'], 
+        ['#1e1b4b', '#311042', '#0f172a'], 
+        ['#1c1917', '#44403c', '#0c0a09']
+    ];
+    const lightPalettes = [
+        ['#f8fafc', '#f1f5f9', '#cbd5e1'], 
+        ['#f4f4f9', '#e8e8f4', '#c8c8e6'], 
+        ['#fef7e0', '#fcebc4', '#f9d27d']
+    ];
+    const list = isDark ? darkPalettes : lightPalettes; 
+    const palette = list[Math.floor(Math.random() * list.length)];
+    
     let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    grad.addColorStop(0, palette); grad.addColorStop(0.5, palette); grad.addColorStop(1, palette);
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // ИСПРАВЛЕНО: Теперь каждый цвет из массива берется по отдельному индексу
+    grad.addColorStop(0, palette[0]); 
+    grad.addColorStop(0.5, palette[1]); 
+    grad.addColorStop(1, palette[2]);
+    
+    ctx.fillStyle = grad; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
     for(let i=0; i<2; i++) {
         ctx.beginPath(); let x = Math.random() * canvas.width; let y = Math.random() * canvas.height; let r = Math.random() * (canvas.width / 2) + 100;
-        let radGrad = ctx.createRadialGradient(x, y, 10, x, y, r); radGrad.addColorStop(0, isDark ? 'rgba(0,255,204,0.08)' : 'rgba(255,59,48,0.05)'); radGrad.addColorStop(1, 'transparent');
+        let radGrad = ctx.createRadialGradient(x, y, 10, x, y, r); 
+        radGrad.addColorStop(0, isDark ? 'rgba(0,255,204,0.08)' : 'rgba(255,59,48,0.05)'); 
+        radGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radGrad; ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     }
 }
@@ -139,4 +159,9 @@ function updateLogic() {
         listContainer.appendChild(row);
     }
 }
-buildMatrix(); resizeCanvas(); updateLogic(); setInterval(updateLogic, 20000);
+
+// Первоначальный старт
+buildMatrix(); 
+resizeCanvas(); 
+updateLogic(); 
+setInterval(updateLogic, 20000);
