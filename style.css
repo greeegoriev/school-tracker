@@ -23,6 +23,8 @@
     padding: 0;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    /* Разрешаем только вертикальный скролл списка, горизонтальный жест отдаем нашему JavaScript */
+    touch-action: pan-y; 
 }
 
 body, html {
@@ -68,7 +70,6 @@ body, html {
 .header-widget {
     text-align: center;
     margin-top: 10px;
-    will-change: transform;
 }
 
 .header-widget h1 {
@@ -151,7 +152,6 @@ body, html {
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid transparent;
-    transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .lesson-row.active {
@@ -160,19 +160,8 @@ body, html {
     box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
 }
 
-.lesson-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.lesson-num {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-sub);
-    width: 18px;
-}
-
+.lesson-left { display: flex; align-items: center; gap: 12px; }
+.lesson-num { font-size: 13px; font-weight: 700; color: var(--text-sub); width: 18px; }
 .lesson-row.active .lesson-num { color: var(--accent); }
 .lesson-name { font-size: 15px; font-weight: 600; }
 .lesson-meta { font-size: 13px; color: var(--text-sub); text-align: right; }
@@ -227,50 +216,35 @@ body, html {
     color: transparent;
 }
 
-.bottom-controls {
+/* Новые навигационные вкладки-табы внизу экрана */
+.navigation-tabs {
     display: flex;
-    justify-content: center;
-    gap: 30px;
-    margin-top: 15px;
-}
-
-.icon-btn {
     background: var(--bg-glass);
     border: 1px solid var(--border-glass);
-    color: var(--text-sub);
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.icon-btn:active { transform: scale(0.9); }
-.icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
-.spacer-btn { width: 40px; height: 40px; }
-
-.page-dots {
-    display: flex;
-    justify-content: center;
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-radius: 20px;
+    padding: 6px;
+    margin-top: 15px;
     gap: 6px;
-    margin-top: 10px;
+    z-index: 10; /* Кнопки кликабельны поверх свайп-зон */
 }
 
-.dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--text-sub);
-    opacity: 0.4;
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 12px;
+    color: var(--text-sub);
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 14px;
+    cursor: pointer;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.dot.active {
-    opacity: 1;
-    width: 16px;
-    border-radius: 3px;
-    background: var(--text-main);
+.tab-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
