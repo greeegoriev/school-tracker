@@ -4,15 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Расписание Кирилла</title>
-    <!-- Подключаем стили -->
-    <link rel="stylesheet" href="https://netlify.app">
+    <style>
+        :root { --bg-color: #f4f6f9; --card-bg: #ffffff; --text-main: #333333; --text-muted: #666666; --accent: #4a90e2; --success: #2ec4b6; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; justify-content: center; }
+        #auth-screen { text-align: center; background: var(--card-bg); padding: 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 400px; width: 100%; display: none; }
+        #auth-screen h2 { margin-bottom: 10px; color: var(--text-main); }
+        #auth-screen p { color: var(--text-muted); margin-bottom: 25px; font-size: 14px; }
+        #login-btn { background: #ffffff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        #app-screen { display: none; width: 100%; max-width: 500px; flex-direction: column; align-items: center; }
+        h1 { margin-bottom: 5px; font-size: 24px; text-align: center; }
+        .logout-area { margin-bottom: 20px; }
+        .logout-btn { background: none; border: none; color: #e63946; cursor: pointer; text-decoration: underline; font-size: 14px; }
+        .child-card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border-top: 5px solid var(--accent); width: 100%; box-sizing: border-box; }
+        .child-name { font-size: 22px; font-weight: bold; margin-bottom: 15px; color: var(--accent); text-align: center; }
+        .status-box { background: #f8f9fa; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center; }
+        .current-lesson { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .timer { font-size: 32px; font-weight: bold; color: var(--success); margin: 10px 0; }
+        .next-break { font-size: 14px; color: var(--text-muted); line-height: 1.4; white-space: pre-line; }
+        .day-info { text-align: center; margin-bottom: 20px; font-weight: 500; color: var(--text-muted); }
+        #loading-screen { font-size: 18px; color: var(--text-muted); }
+    </style>
 </head>
 <body>
-
     <div id="loading-screen">Загрузка системы времени и авторизации...</div>
-
-    <!-- ЭКРАН ВХОДА -->
-    <div id="auth-screen" style="display:none;">
+    <div id="auth-screen">
         <h2>Вход в трекер</h2>
         <p id="auth-message">Доступ только для членов семьи</p>
         <button id="login-btn">
@@ -20,15 +35,10 @@
             Войти через Google
         </button>
     </div>
-
-    <!-- ОСНОВНОЙ ЭКРАН -->
-    <div id="app-screen" style="display:none;">
+    <div id="app-screen">
         <h1>🏫 Школьный трекер времени</h1>
-        <div class="logout-area">
-            <button class="logout-btn" id="logout-btn">Выйти из аккаунта</button>
-        </div>
+        <div class="logout-area"><button class="logout-btn" id="logout-btn">Выйти из аккаунта</button></div>
         <div class="day-info" id="current-time-display">Загрузка времени...</div>
-
         <div class="child-card">
             <div class="child-name">Кирилл</div>
             <div class="status-box">
@@ -38,8 +48,7 @@
             </div>
         </div>
     </div>
-
-    <!-- Подключаем всю логику одной безопасной строчкой -->
-    <script type="module" src="https://netlify.app"></script>
+    <!-- Запускаем локальный скрипт -->
+    <script type="module" src="app.js"></script>
 </body>
 </html>
