@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Расписание Кирилла</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --accent: #4a90e2;
+            --success: #2ec4b6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            justify-content: center;
+        }
+        #auth-screen {
+            text-align: center;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            max-width: 400px;
+            width: 100%;
+            display: none;
+        }
+        #auth-screen h2 { margin-bottom: 10px; color: var(--text-main); }
+        #auth-screen p { color: var(--text-muted); margin-bottom: 25px; font-size: 14px; }
+        #login-btn {
+            background: #ffffff;
+            color: #757575;
+            border: 1px solid #ddd;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #app-screen { display: none; width: 100%; max-width: 500px; flex-direction: column; align-items: center; }
+        h1 { margin-bottom: 5px; font-size: 24px; text-align: center; }
+        .logout-area { margin-bottom: 20px; }
+        .logout-btn { background: none; border: none; color: #e63946; cursor: pointer; text-decoration: underline; font-size: 14px; }
+        .child-card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border-top: 5px solid var(--accent); width: 100%; box-sizing: border-box; }
+        .child-name { font-size: 22px; font-weight: bold; margin-bottom: 15px; color: var(--accent); text-align: center; }
+        .status-box { background: #f8f9fa; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center; }
+        .current-lesson { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .timer { font-size: 32px; font-weight: bold; color: var(--success); margin: 10px 0; }
+        .next-break { font-size: 14px; color: var(--text-muted); line-height: 1.4; }
+        .day-info { text-align: center; margin-bottom: 20px; font-weight: 500; color: var(--text-muted); }
+        #loading-screen { font-size: 18px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">Загрузка системы авторизации...</div>
+
+    <!-- ЭКРАН ВХОДА -->
+    <div id="auth-screen">
+        <h2>Вход в трекер</h2>
+        <p id="auth-message">Доступ только для членов семьи</p>
+        <button id="login-btn">
+            <img src="https://gstatic.com" width="20" alt="Google">
+            Войти через Google
+        </button>
+    </div>
+
+    <!-- ОСНОВНОЙ ЭКРАН -->
+    <div id="app-screen">
+        <h1>🏫 Школьный трекер времени</h1>
+        <div class="logout-area">
+            <button class="logout-btn" id="logout-btn">Выйти из аккаунта</button>
+        </div>
+        <div class="day-info" id="current-time-display">Загрузка времени...</div>
+
+        <div class="child-card">
+            <div class="child-name">Кирилл</div>
+            <div class="status-box">
+                <div class="current-lesson" id="c1-title">Определение статуса...</div>
+                <div class="timer" id="c1-timer">--:--</div>
+                <div class="next-break" id="c1-break">Перемена: --</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://gstatic.com";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://gstatic.com";
+
+        // Конфигурация Firebase (из вашего личного кабинета)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBibVt41A2cU1_zA7efXLP5mxz-uo8T-2w",
+            authDomain: "://firebaseapp.com",
+            projectId: "school-tracker-2026-1",
+            storageBucket: "school-tracker-2026-1.firebasestorage.app",
+            messagingSenderId: "353230380490",
+            appId: "1:353230380490:web:a738ed00704059c8a83333"
+        };
+
+        // Разрешенный список email
+        const ALLOWED_EMAILS = [
+            "a.greegoriev@gmail.com"
+        ];
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        const loadingScreen = document.getElementById('loading-screen');
+        const authScreen = document.getElementById('auth-screen');
+        const appScreen = document.getElementById('app-screen');
+        const authMessage = document.getElementById('auth-message');
+
+        let intervalId = null;
+
+        onAuthStateChanged(auth, (user) => {
+            loadingScreen.style.display = 'none';
+            if (user) {
+                if (ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
+                    authScreen.style.display = 'none';
+                    appScreen.style.display = 'flex';
+                    document.body.style.justifyContent = 'flex-start';
+                    
+                    if (!intervalId) {
+                        updateTracker();
+                        intervalId = setInterval(updateTracker, 1000);
+                    }
+                } else {
+                    authMessage.innerText = "❌ Доступ запрещен. Этот Email отсутствует в списке семьи.";
+                    authMessage.style.color = "red";
+                    authScreen.style.display = 'block';
+                    appScreen.style.display = 'none';
+                    signOut(auth);
+                }
+            } else {
+                authScreen.style.display = 'block';
+                appScreen.style.display = 'none';
+                document.body.style.justifyContent = 'center';
+                if (intervalId) {
+                    clearInterval(intervalId);
+                    intervalId = null;
+                }
+            }
+        });
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch((error) => {
+                alert("Ошибка входа: " + error.message);
+            });
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                window.location.reload();
+            });
+        });
+
+        // БАЗА ДАННЫХ ВРЕМЕНИ ЗВОНКОВ
+        const timeSlots = [
+            { number: 1, start: "08:30", end: "09:10", breakAfter: 10 },
+            { number: 2, start: "09:20", end: "10:00", breakAfter: 20 },
+            { number: 3, start: "10:20", end: "11:00", breakAfter: 10 },
+            { number: 4, start: "11:10", end: "11:50", breakAfter: 20 },
+            { number: 5, start: "12:10", end: "12:50", breakAfter: 20 },
+            { number: 6, start: "13:10", end: "13:50", breakAfter: 10 },
+            { number: 7, start: "14:00", end: "14:40", breakAfter: 10 },
+            { number: 8, start: "14:50", end: "15:30", breakAfter: 10 },
+            { number: 9, start: "15:40", end: "16:20", breakAfter: 0 }
+        ];
+
+        // БАЗА ДАННЫХ ПРЕДМЕТОВ КИРИЛЛА
+        const weeklyLessons = {
+            1: { // Понедельник
+                1: "Физика (каб. 301)", 2: "Литература (каб. 308)", 3: "История (каб. 210)",
+                4: "Алгебра (каб. 313)", 5: "Вероятность (каб. 313)", 6: "Физкультура (спорт.зал)",
+                7: "Информатика (каб. 301)"
+            },
+            2: { // Вторник
+                2: "География (каб. 306)", 3: "Труд (каб. 201)", 4: "История (каб. 210)",
+                5: "Русский язык (каб. 308)", 6: "Музыка (каб. 303)", 7: "Алгебра (каб. 313)",
+                8: "Геометрия (каб. 313)"
+            },
+            3: { // Среда
+                1: "ОБЗР (каб. 301)", 2: "Биология (каб. 203)", 3: "Физкультура (спорт.зал)",
+                4: "Англ.язык (каб. 305)", 5: "Физика (каб. 301)", 6: "География (каб. 306)"
+            },
+            4: { // Четверг
+                3: "Биология (каб. 203)", 4: "Англ.язык (каб. 305)", 5: "История (каб. 210)",
+                6: "Русский язык (каб. 308)", 7: "Химия (каб. 316)"
+            },
+            5: { // Пятница
+                3: "Химия (каб. 316)", 4: "Алгебра (каб. 313)", 5: "Русский язык (каб. 308)",
+                6: "Англ.язык (каб. 305)", 7: "Литература (каб. 308)", 8: "Геометрия (каб. 313)"
+            }
+        };
+
+        function timeToMinutes(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function formatRemainingTime(secondsTotal) {
+            const minutes = Math.floor(secondsTotal / 60);
+            const seconds = secondsTotal % 60;
+            return `${minutes} мин. ${seconds < 10 ? '0' : ''}${seconds} сек.`;
+        }
+
+        function updateTracker() {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            
+            document.getElementById('current-time-display').innerText = 
+                `Сегодня: ${now.toLocaleDateString('ru-RU', { weekday: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+
