@@ -17,11 +17,15 @@ const daysData = {
     5: { name: "Пятница", short: "Пт", lessons: { 3: "Химия", 4: "Алгебра", 5: "Русский язык", 6: "Английский язык", 7: "Литература", 8: "Геометрия" }, rooms: {3:"316", 4:"313", 5:"308", 6:"305", 7:"308", 8:"313"} }
 };
 
-// 1. АВТОМАТИЧЕСКАЯ УСТАНОВКА ДЕНЬ/НОЧЬ ПО ВРЕМЕНИ СУТОК
 const currentHour = new Date().getHours();
 document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 
-// 2. НАУЧНЫЙ СВАЙП-ЛОНЧЕР (Инерционная тач-карусель Android)
+document.getElementById('theme-toggle').addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    document.documentElement.setAttribute('data-theme', currentTheme === 'dark' ? 'light' : 'dark');
+    generateFluidBackground();
+});
+
 const swiper = document.getElementById('swiper');
 let startX = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0;
 
@@ -39,22 +43,19 @@ window.addEventListener('touchend', () => {
     switchScreen(currentIdx);
 });
 
-// Программное переключение экранов кнопками-вкладками (Табами)
 function switchScreen(index) {
     currentIdx = index;
     currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
-    swiper.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+    swiper.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
     swiper.style.transform = `translateX(${currentTranslate}px)`;
     generateFluidBackground();
 }
 
-// 3. СМЕНА ФОНА ПО ЛЮБОМУ КЛИКУ ПО ЭКРАНУ (КРОМЕ НАВИГАЦИОННЫХ ТАБОВ)
 window.addEventListener('click', (e) => {
-    if (e.target.closest('.navigation-tabs')) return; // Игнорируем клики по кнопкам навигации
+    if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
     generateFluidBackground();
 });
 
-// 4. СБОРКА НЕДЕЛЬНОЙ МАТРИЦЫ
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
     let corner = document.createElement('div'); corner.className = 'matrix-cell header'; corner.innerText = '№'; grid.appendChild(corner);
@@ -66,43 +67,59 @@ function buildMatrix() {
         for (let d = 1; d <= 5; d++) {
             let cell = document.createElement('div'); const name = daysData[d].lessons[l];
             cell.className = name ? 'matrix-cell' : 'matrix-cell empty';
-            if (name) cell.innerText = name; grid.appendChild(cell);
+            if (name) {
+                cell.innerText = name;
+                // Умная инспекция длины слова: динамически сжимаем шрифт для супер-длинных названий
+                if (name.length > 11) cell.style.fontSize = '7px';
+                if (name.length > 14) cell.style.fontSize = '6px';
+            }
+            grid.appendChild(cell);
         }
     }
 }
 
-// 5. ГЕНЕРАТОР ПРЕМИАЛЬНЫХ ФОНОВ (9 ВАРИАНТОВ)
 const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
-function resizeCanvas() { canvas.width = window.innerWidth * 1.1; canvas.height = window.innerHeight * 1.1; generateFluidBackground(); }
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); }
 
 function generateFluidBackground() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const darkPalettes = [['#0f172a', '#1e1b4b', '#2e1065'], ['#022c22', '#064e3b', '#011510'], ['#1e1b4b', '#311042', '#0f172a'], ['#1c1917', '#44403c', '#0c0a09']];
-    const lightPalettes = [['#f8fafc', '#f1f5f9', '#cbd5e1'], ['#f4f4f9', '#e8e8f4', '#c8c8e6'], ['#fef7e0', '#fcebc4', '#f9d27d']];
+    const darkPalettes = [
+        ['#0d001a', '#ff0055', '#00ffcc'], 
+        ['#020c1b', '#0072ff', '#00f6ff'], 
+        ['#0a1908', '#00ff66', '#9900ff'], 
+        ['#140202', '#ff5e00', '#ff0055']
+    ];
+    const lightPalettes = [
+        ['#ffffff', '#ff007f', '#ffaa00'], 
+        ['#f5f7ff', '#4facfe', '#00f2fe'], 
+        ['#fafff5', '#11998e', '#38ef7d']
+    ];
     const list = isDark ? darkPalettes : lightPalettes; const palette = list[Math.floor(Math.random() * list.length)];
     
     let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
     grad.addColorStop(0, palette[0]); 
     grad.addColorStop(0.5, palette[1]); 
     grad.addColorStop(1, palette[2]);
-    
     ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    for(let i=0; i<2; i++) {
-        ctx.beginPath(); let x = Math.random() * canvas.width; let y = Math.random() * canvas.height; let r = Math.random() * (canvas.width / 2) + 100;
-        let radGrad = ctx.createRadialGradient(x, y, 10, x, y, r); radGrad.addColorStop(0, isDark ? 'rgba(0,255,204,0.08)' : 'rgba(255,59,48,0.05)'); radGrad.addColorStop(1, 'transparent');
+    
+    for(let i=0; i<3; i++) {
+        ctx.beginPath(); let x = Math.random() * canvas.width; let y = Math.random() * canvas.height; let r = Math.random() * (canvas.width / 1.5) + 150;
+        let radGrad = ctx.createRadialGradient(x, y, 20, x, y, r); radGrad.addColorStop(0, palette[1] + '33'); radGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radGrad; ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     }
 }
 
-window.addEventListener('resize', resizeCanvas);
 window.addEventListener('deviceorientation', e => {
     if (!e.gamma || !e.beta) return;
-    let x = e.gamma / 3, y = e.beta / 3; canvas.style.transform = `translate(${x}px, ${y}px) scale(1.05)`;
+    let x = Math.min(Math.max(e.gamma, -30), 30) / 1.5; 
+    let y = Math.min(Math.max(e.beta - 45, -30), 30) / 1.5;
+    canvas.style.transform = `translate3d(${x * 1.5}px, ${y * 1.5}px, 0) scale(1.15)`;
+    const tiltElements = document.querySelectorAll('.gyro-tilt');
+    tiltElements.forEach(el => { el.style.transform = `rotateY(${x / 2}deg) rotateX(${-y / 2}deg) translateZ(15px)`; });
 });
 
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
 
-// 6. УМНАЯ ЛОГИКА ТАЙМЕРОВ И ВРЕМЕНИ ЗВОНКОВ
 function updateLogic() {
     const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes();
     let isWeekend = (day === 0 || day === 6), targetDay = day;
@@ -145,14 +162,8 @@ function updateLogic() {
     } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий день: ${activeDayInfo.name}`; }
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
     
-    // Безупречный рендеринг времени звонков для каждого урока
     for (let slot = 1; slot <= 8; slot++) {
         const name = activeDayInfo.lessons[slot]; if (!name) continue;
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
-        const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";
-        row.innerHTML = `<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>`;
-        listContainer.appendChild(row);
-    }
-}
-buildMatrix(); resizeCanvas(); updateLogic(); setInterval(updateLogic, 20000);
+        const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";row.innerHTML = <div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>;listContainer.appendChild(row);}}buildMatrix(); window.addEventListener('load', resizeCanvas); updateLogic(); setInterval(updateLogic, 20000);
