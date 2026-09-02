@@ -1,69 +1,42 @@
-import { initializeApp } from "https://jsdelivr.net";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://jsdelivr.net";
+// Автономная система без внешних библиотек
+const SECRET_KEY = "mysecret123"; // 🔑 ВАШ СЕКРЕТНЫЙ КЛЮЧ ДЛЯ ССЫЛКИ
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBibVt41A2cU1_zA7efXLP5mxz-uo8T-2w",
-    authDomain: "://firebaseapp.com",
-    projectId: "school-tracker-2026-1",
-    storageBucket: "school-tracker-2026-1.firebasestorage.app",
-    messagingSenderId: "353230380490",
-    appId: "1:353230380490:web:a738ed00704059c8a83333"
-};
+function checkAccess() {
+    // Проверяем, есть ли ключ в адресе строки: ?key=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const keyFromUrl = urlParams.get('key');
 
-const ALLOWED_EMAILS = ["a.greegoriev@gmail.com"];
+    if (keyFromUrl === SECRET_KEY) {
+        localStorage.setItem('school_access_key', SECRET_KEY);
+        // Очищаем URL от ключа для красоты в адресной строке
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return true;
+    }
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+    // Если в URL ключа нет, проверяем, заходил ли пользователь ранее
+    const savedKey = localStorage.getItem('school_access_key');
+    return savedKey === SECRET_KEY;
+}
 
+// Элементы экрана
 const loadingScreen = document.getElementById('loading-screen');
 const authScreen = document.getElementById('auth-screen');
 const appScreen = document.getElementById('app-screen');
-const authMessage = document.getElementById('auth-message');
 
-let intervalId = null;
+// ЗАПУСК ПРИЛОЖЕНИЯ
+loadingScreen.style.display = 'none';
 
-onAuthStateChanged(auth, (user) => {
-    loadingScreen.style.display = 'none';
-    if (user) {
-        if (ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
-            authScreen.style.display = 'none';
-            appScreen.style.display = 'flex';
-            document.body.style.justifyContent = 'flex-start';
-            if (!intervalId) {
-                updateTracker();
-                intervalId = setInterval(updateTracker, 1000);
-            }
-        } else {
-            authMessage.innerText = "❌ Доступ запрещен. Этот Email отсутствует в списке семьи.";
-            authMessage.style.color = "red";
-            authScreen.style.display = 'block';
-            appScreen.style.display = 'none';
-            signOut(auth);
-        }
-    } else {
-        authScreen.style.display = 'block';
-        appScreen.style.display = 'none';
-        document.body.style.justifyContent = 'center';
-        if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = null;
-        }
-    }
-});
+if (checkAccess()) {
+    appScreen.style.display = 'flex';
+    document.body.style.justifyContent = 'flex-start';
+    updateTracker();
+    setInterval(updateTracker, 1000);
+} else {
+    // Вместо экрана входа показываем ошибку доступа для посторонних
+    document.body.innerHTML = "<div style='text-align:center; margin-top:100px;'><h1 style='font-size:48px; margin-bottom:10px;'>404</h1><p style='color:#666;'>Страница не найдена или доступ ограничен.</p></div>";
+}
 
-document.getElementById('login-btn').addEventListener('click', () => {
-    signInWithPopup(auth, provider).catch((error) => {
-        alert("Ошибка входа: " + error.message);
-    });
-});
-
-document.getElementById('logout-btn').addEventListener('click', () => {
-    signOut(auth).then(() => {
-        window.location.reload();
-    });
-});
-
+// БАЗА ДАННЫХ ВРЕМЕНИ ЗВОНКОВ КИРИЛЛА
 const timeSlots = [
     { number: 1, start: "08:30", end: "09:10", breakAfter: 10 },
     { number: 2, start: "09:20", end: "10:00", breakAfter: 20 },
@@ -76,6 +49,7 @@ const timeSlots = [
     { number: 9, start: "15:40", end: "16:20", breakAfter: 0 }
 ];
 
+// БАЗА ДАННЫХ ПРЕДМЕТОВ КИРИЛЛА
 const weeklyLessons = {
     1: { 1: "Физика (каб. 301)", 2: "Литература (каб. 308)", 3: "История (каб. 210)", 4: "Алгебра (каб. 313)", 5: "Вероятность (каб. 313)", 6: "Физкультура (спорт.зал)", 7: "Информатика (каб. 301)" },
     2: { 2: "География (каб. 306)", 3: "Труд (каб. 201)", 4: "История (каб. 210)", 5: "Русский язык (каб. 308)", 6: "Музыка (каб. 303)", 7: "Алгебра (каб. 313)", 8: "Геометрия (каб. 313)" },
@@ -126,6 +100,7 @@ function processChildSchedule(dayOfWeek, prefix) {
     const lastSlot = timeSlots.find(s => s.number === lastLessonNum);
     const schoolStartSec = timeToMinutes(firstSlot.start) * 60;
     const schoolEndSec = timeToMinutes(lastSlot.end) * 60;
+
     if (totalCurrentSeconds < schoolStartSec) {
         const diff = schoolStartSec - totalCurrentSeconds;
         document.getElementById(prefix + '-title').innerText = "До начала занятий (" + todayLessons[firstLessonNum] + ")";
