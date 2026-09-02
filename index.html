@@ -5,82 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Расписание Кирилла</title>
     
-    <!-- Метатеги для запуска в режиме веб-приложения (без строк браузера) на iQOO Z8 -->
+    <!-- Метатеги мобильного приложения для смартфона iQOO Z8 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- Строго строчный регистр для GitHub Pages -->
-    <link rel="stylesheet" href="style.css">
+    <!-- Защита от кэширования через версии файлов (v=3) -->
+    <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
-    <!-- Жидкий интерактивный фон -->
+    <!-- Интерактивный генеративный фон на весь экран -->
     <canvas id="bg-canvas"></canvas>
 
-    <!-- Нативный слайдер-лончер -->
+    <!-- Главный контейнер карусели слайдов -->
     <div class="swiper-container" id="swiper">
         
-        <!-- СЛАЙД 1: Экран дня -->
+        <!-- СЛАЙД 1: Расписание на один день -->
         <div class="slide">
-            <div class="header-widget" id="header1">
+            <div class="header-widget">
                 <h1>Расписание Кирилла</h1>
             </div>
 
-            <!-- Виджет умного таймера -->
+            <!-- Виджет обратного отсчета времени -->
             <div class="timer-card">
                 <div class="timer-status" id="timer-label">Загрузка...</div>
                 <div class="timer-countdown" id="timer-time">00:00</div>
                 <div class="timer-sub" id="timer-sub">анализ уроков...</div>
             </div>
 
-            <!-- Дневной план -->
+            <!-- Компактный блок текущего дня -->
             <div class="day-schedule-box">
                 <div class="day-title" id="day-title">Сегодня</div>
                 <div class="lessons-list" id="day-lessons"></div>
             </div>
 
-            <!-- Индикаторы экранов -->
-            <div class="page-dots">
-                <div class="dot active"></div>
-                <div class="dot"></div>
-            </div>
-
-            <!-- Минималистичный скрытый интерфейс -->
-            <div class="bottom-controls">
-                <button class="icon-btn" id="theme-toggle" aria-label="Смена темы">
-                    <svg viewBox="0 0 24 24"><path d="M12 3c.132 0 .263 0 .393.007a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 3z"/></svg>
-                </button>
-                <button class="icon-btn" id="bg-generate" aria-label="Новый фон">
-                    <svg viewBox="0 0 24 24"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6a5.87 5.87 0 0 1-2.8-.7l-1.46 1.46A7.93 7.93 0 0 0 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46A7.93 7.93 0 0 0 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/></svg>
-                </button>
+            <!-- Явные навигационные кнопки-вкладки (Табы) -->
+            <div class="navigation-tabs">
+                <button class="tab-btn active" onclick="switchScreen(0)">День</button>
+                <button class="tab-btn" onclick="switchScreen(1)">Неделя</button>
             </div>
         </div>
 
-        <!-- СЛАЙД 2: Матрица недели полностью на весь экран -->
+        <!-- СЛАЙД 2: Матрица всей недели -->
         <div class="slide">
-            <div class="header-widget" id="header2">
+            <div class="header-widget">
                 <h1>Вся неделя</h1>
             </div>
 
+            <!-- Ультракомпактная сетка -->
             <div class="week-matrix-box">
                 <div class="matrix-grid" id="matrix-grid"></div>
             </div>
 
-            <div class="page-dots">
-                <div class="dot"></div>
-                <div class="dot active"></div>
-            </div>
-
-            <div class="bottom-controls">
-                <div class="spacer-btn"></div>
-                <div class="spacer-btn"></div>
+            <!-- Дублирующие навигационные кнопки-вкладки -->
+            <div class="navigation-tabs">
+                <button class="tab-btn" onclick="switchScreen(0)">День</button>
+                <button class="tab-btn active" onclick="switchScreen(1)">Неделя</button>
             </div>
         </div>
 
     </div>
 
-    <!-- Строго строчный регистр для скрипта -->
-    <script src="script.js"></script>
+    <!-- Защита от кэширования скрипта -->
+    <script src="script.js?v=3"></script>
 </body>
 </html>
