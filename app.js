@@ -1,11 +1,11 @@
 const HASHED_KEY = "accdb61253228627734b63ffdb49dd2dc708425b07e5fb618d92f46f342ca0be";
 
-// 🖼️ СЮДА ВСТАВЛЯЙТЕ СВОИ КАРТИНКИ
+// 🖼️ МЕСТО ДЛЯ ВАШИХ КАРТИНОК
 const BG_ALGO = {
-    morning: "https://unsplash.com",
-    day: "https://unsplash.com",
-    evening: "https://unsplash.com",
-    night: "https://unsplash.com"
+    morning: "https://picsum.photos",
+    day: "https://picsum.photos",
+    evening: "https://picsum.photos",
+    night: "https://picsum.photos"
 };
 
 const BG_MODES = ['auto', 'morning', 'day', 'evening', 'night'];
@@ -38,11 +38,7 @@ function getBgByTime() {
 function applyBackground() {
     const bgContainer = document.getElementById('parallax-bg');
     const mode = localStorage.getItem('bg_mode') || 'auto';
-    if (mode === 'auto') {
-        bgContainer.style.backgroundImage = "url('" + getBgByTime() + "')";
-    } else {
-        bgContainer.style.backgroundImage = "url('" + BG_ALGO[mode] + "')";
-    }
+    bgContainer.style.backgroundImage = "url('" + (mode === 'auto' ? getBgByTime() : BG_ALGO[mode]) + "')";
 }
 
 function initUX() {
