@@ -5,60 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Расписание Кирилла</title>
     
-    <!-- Метатеги мобильного приложения для смартфона iQOO Z8 -->
+    <!-- Режим standalone-приложения для экрана iQOO Z8 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- Защита от кэширования через версии файлов (v=3) -->
-    <link rel="stylesheet" href="style.css?v=3">
+    <!-- Подключение кастомных веб-шрифтов премиум-уровня -->
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=JetBrains+Mono:wght@800;900&family=Unbounded:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Принудительный сброс кэша браузера версией v=6 -->
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
-    <!-- Интерактивный генеративный фон на весь экран -->
+    <!-- Слой генеративного интерактивного холста -->
     <canvas id="bg-canvas"></canvas>
 
-    <!-- Главный контейнер карусели слайдов -->
+    <!-- Трехмерный контейнер карусели страниц -->
     <div class="swiper-container" id="swiper">
         
-        <!-- СЛАЙД 1: Расписание на один день -->
+        <!-- СЛАЙД 1: Компактный обзор дня и живой таймер -->
         <div class="slide">
-            <div class="header-widget">
+            <div class="header-widget gyro-tilt">
                 <h1>Расписание Кирилла</h1>
             </div>
 
-            <!-- Виджет обратного отсчета времени -->
-            <div class="timer-card">
+            <!-- Виджет умного обратного отсчета -->
+            <div class="timer-card gyro-tilt">
                 <div class="timer-status" id="timer-label">Загрузка...</div>
                 <div class="timer-countdown" id="timer-time">00:00</div>
                 <div class="timer-sub" id="timer-sub">анализ уроков...</div>
             </div>
 
-            <!-- Компактный блок текущего дня -->
-            <div class="day-schedule-box">
+            <!-- План на учебный день -->
+            <div class="day-schedule-box gyro-tilt">
                 <div class="day-title" id="day-title">Сегодня</div>
                 <div class="lessons-list" id="day-lessons"></div>
             </div>
 
-            <!-- Явные навигационные кнопки-вкладки (Табы) -->
+            <!-- Навигационные табы управления -->
             <div class="navigation-tabs">
                 <button class="tab-btn active" onclick="switchScreen(0)">День</button>
                 <button class="tab-btn" onclick="switchScreen(1)">Неделя</button>
             </div>
         </div>
 
-        <!-- СЛАЙД 2: Матрица всей недели -->
+        <!-- СЛАЙД 2: Матрица всей недели на одном экране -->
         <div class="slide">
-            <div class="header-widget">
+            <div class="header-widget gyro-tilt">
                 <h1>Вся неделя</h1>
             </div>
 
-            <!-- Ультракомпактная сетка -->
-            <div class="week-matrix-box">
+            <!-- Bento-сетка недели с адаптивным текстом -->
+            <div class="week-matrix-box gyro-tilt">
                 <div class="matrix-grid" id="matrix-grid"></div>
             </div>
 
-            <!-- Дублирующие навигационные кнопки-вкладки -->
+            <!-- Навигационные табы управления -->
             <div class="navigation-tabs">
                 <button class="tab-btn" onclick="switchScreen(0)">День</button>
                 <button class="tab-btn active" onclick="switchScreen(1)">Неделя</button>
@@ -67,7 +72,7 @@
 
     </div>
 
-    <!-- Защита от кэширования скрипта -->
-    <script src="script.js?v=3"></script>
+    <!-- Управляющий скрипт с защитой от кэширования -->
+    <script src="script.js?v=6"></script>
 </body>
 </html>
