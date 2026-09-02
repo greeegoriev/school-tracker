@@ -1,40 +1,48 @@
-// Автономная система без внешних библиотек
-const SECRET_KEY = "mysecret2026"; // 🔑 ВАШ СЕКРЕТНЫЙ КЛЮЧ ДЛЯ ССЫЛКИ
+const HASHED_KEY = "accdb61253228627734b63ffdb49dd2dc708425b07e5fb618d92f46f342ca0be";
 
-function checkAccess() {
-    // Проверяем, есть ли ключ в адресе строки: ?key=...
+async function hashKey(string) {
+    const utf8 = new TextEncoder().encode(string);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkAccess() {
     const urlParams = new URLSearchParams(window.location.search);
     const keyFromUrl = urlParams.get('key');
 
-    if (keyFromUrl === SECRET_KEY) {
-        localStorage.setItem('school_access_key', SECRET_KEY);
-        // Очищаем URL от ключа для красоты в адресной строке
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return true;
+    if (keyFromUrl) {
+        const hashedInput = await hashKey(keyFromUrl);
+        if (hashedInput === HASHED_KEY) {
+            localStorage.setItem('school_access_hash', HASHED_KEY);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return true;
+        }
     }
 
-    // Если в URL ключа нет, проверяем, заходил ли пользователь ранее
-    const savedKey = localStorage.getItem('school_access_key');
-    return savedKey === SECRET_KEY;
+    const savedHash = localStorage.getItem('school_access_hash');
+    return savedHash === HASHED_KEY;
 }
 
 // Элементы экрана
 const loadingScreen = document.getElementById('loading-screen');
-const authScreen = document.getElementById('auth-screen');
 const appScreen = document.getElementById('app-screen');
 
 // ЗАПУСК ПРИЛОЖЕНИЯ
-loadingScreen.style.display = 'none';
-
-if (checkAccess()) {
-    appScreen.style.display = 'flex';
-    document.body.style.justifyContent = 'flex-start';
-    updateTracker();
-    setInterval(updateTracker, 1000);
-} else {
-    // Вместо экрана входа показываем ошибку доступа для посторонних
-    document.body.innerHTML = "<div style='text-align:center; margin-top:100px;'><h1 style='font-size:48px; margin-bottom:10px;'>404</h1><p style='color:#666;'>Страница не найдена или доступ ограничен.</p></div>";
+async function init() {
+    loadingScreen.style.display = 'none';
+    
+    if (await checkAccess()) {
+        appScreen.style.display = 'flex';
+        document.body.style.justifyContent = 'flex-start';
+        updateTracker();
+        setInterval(updateTracker, 1000);
+    } else {
+        document.body.innerHTML = "<div style='text-align:center; margin-top:100px;'><h1 style='font-size:48px; margin-bottom:10px;'>404</h1><p style='color:#666;'>Страница не найдена или доступ ограничен.</p></div>";
+    }
 }
+
+init();
 
 // БАЗА ДАННЫХ ВРЕМЕНИ ЗВОНКОВ КИРИЛЛА
 const timeSlots = [
@@ -119,6 +127,7 @@ function processChildSchedule(dayOfWeek, prefix) {
         const slotStartSec = timeToMinutes(slot.start) * 60;
         const slotEndSec = timeToMinutes(slot.end) * 60;
         const lessonName = todayLessons[slot.number];
+
         if (totalCurrentSeconds >= slotStartSec && totalCurrentSeconds < slotEndSec) {
             if (lessonName) {
                 const diff = slotEndSec - totalCurrentSeconds;
