@@ -20,12 +20,6 @@ const daysData = {
 const currentHour = new Date().getHours();
 document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 
-document.getElementById('theme-toggle').addEventListener('click', () => {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    document.documentElement.setAttribute('data-theme', currentTheme === 'dark' ? 'light' : 'dark');
-    generateFluidBackground();
-});
-
 const swiper = document.getElementById('swiper');
 let startX = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0;
 
