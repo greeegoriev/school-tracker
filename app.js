@@ -3,9 +3,9 @@ const HASHED_KEY = "accdb61253228627734b63ffdb49dd2dc708425b07e5fb618d92f46f342c
 // AI и стоковые фоны на выбор
 const BACKGROUNDS = {
     none: "",
-    panel: "url('https://easy-peasy.ai')",
-    cars: "url('https://dreamstime.com')",
-    mc: "url('https://lacasadellafibra.com')"
+    panel: "url('https://unsplash.com')", // Стильная атмосферная застройка
+    cars: "url('https://unsplash.com')",  // Красивое автомобильное ретро
+    mc: "url('https://unsplash.com')"     // Кубический пиксель-арт ландшафт
 };
 
 async function hashKey(string) {
@@ -179,7 +179,7 @@ function renderScheduleTable(dayNum, isTomorrow) {
                     activeClass = " active-now";
                 }
             }
-            html += `<div class="schedule-item${activeClass}"><span>${slot.number}. ${name}</span><span style="opacity:0.7">${slot.start}-${slot.end}</span></div>`;
+              html += `<div class="schedule-item${activeClass}"><span class="lesson-text">${slot.number}. ${name}</span><span class="time-text">${slot.start} - ${slot.end}</span></div>`;
         }
     });
     listContainer.innerHTML = html;
