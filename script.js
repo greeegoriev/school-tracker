@@ -56,6 +56,33 @@ window.addEventListener('click', (e) => {
     generateFluidBackground();
 });
 
+const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); }
+
+function generateFluidBackground() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const darkPalettes = [
+        { base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
+        { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
+        { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] },
+        { base: '#0d0202', colors: ['#ff3300', '#ff0055', '#ffcc00', '#3b0066'] }
+    ];
+    const lightPalettes = [
+        { base: '#ffffff', colors: ['#ff007f', '#ffaa00', '#00f2fe', '#4facfe'] },
+        { base: '#f4f7ff', colors: ['#fbc2eb', '#a6c1ee', '#fad0c4', '#ff9a9e'] },
+        { base: '#fdfbf7', colors: ['#11998e', '#38ef7d', '#ffefba', '#ffffff'] }
+    ];
+    const list = isDark ? darkPalettes : lightPalettes; const selected = list[Math.floor(Math.random() * list.length)];
+    ctx.fillStyle = selected.base; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const positions = [{ x: 0, y: 0 }, { x: canvas.width, y: 0 }, { x: 0, y: canvas.height }, { x: canvas.width, y: canvas.height }];
+    positions.forEach((pos, index) => {
+        ctx.save(); let offsetX = (Math.random() - 0.5) * (canvas.width * 0.4); let offsetY = (Math.random() - 0.5) * (canvas.height * 0.4);
+        let targetX = pos.x + offsetX; let targetY = pos.y + offsetY; let radius = Math.random() * (canvas.width * 0.8) + canvas.width * 0.4;
+        let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
+        radialGrad.addColorStop(0, selected.colors[index] + '77'); radialGrad.addColorStop(0.5, selected.colors[index] + '22'); radialGrad.addColorStop(1, 'transparent');
+        ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    });
+}
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
     let corner = document.createElement('div'); corner.className = 'matrix-cell header'; corner.innerText = '№'; grid.appendChild(corner);
@@ -75,60 +102,6 @@ function buildMatrix() {
             grid.appendChild(cell);
         }
     }
-}
-
-const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
-function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); }
-
-function generateFluidBackground() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    
-    const darkPalettes = [
-        { base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
-        { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
-        { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] },
-        { base: '#0d0202', colors: ['#ff3300', '#ff0055', '#ffcc00', '#3b0066'] }
-    ];
-    
-    const lightPalettes = [
-        { base: '#ffffff', colors: ['#ff007f', '#ffaa00', '#00f2fe', '#4facfe'] },
-        { base: '#f4f7ff', colors: ['#fbc2eb', '#a6c1ee', '#fad0c4', '#ff9a9e'] },
-        { base: '#fdfbf7', colors: ['#11998e', '#38ef7d', '#ffefba', '#ffffff'] }
-    ];
-    
-    const list = isDark ? darkPalettes : lightPalettes;
-    const selected = list[Math.floor(Math.random() * list.length)];
-    
-    ctx.fillStyle = selected.base;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    const positions = [
-        { x: 0, y: 0 },
-        { x: canvas.width, y: 0 },
-        { x: 0, y: canvas.height },
-        { x: canvas.width, y: canvas.height }
-    ];
-    
-    positions.forEach((pos, index) => {
-        ctx.save();
-        let offsetX = (Math.random() - 0.5) * (canvas.width * 0.4);
-        let offsetY = (Math.random() - 0.5) * (canvas.height * 0.4);
-        let targetX = pos.x + offsetX;
-        let targetY = pos.y + offsetY;
-        let radius = Math.random() * (canvas.width * 0.8) + canvas.width * 0.4;
-        
-        let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
-        radialGrad.addColorStop(0, selected.colors[index] + '77'); 
-        radialGrad.addColorStop(0.5, selected.colors[index] + '22');
-        radialGrad.addColorStop(1, 'transparent');
-        
-        ctx.globalCompositeOperation = 'screen';
-        ctx.fillStyle = radialGrad;
-        ctx.beginPath();
-        ctx.arc(targetX, targetY, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    });
 }
 
 window.addEventListener('deviceorientation', e => {
@@ -181,4 +154,24 @@ function updateLogic() {
                 }
             }
         }
-        } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = Следующий день: ${activeDayInfo.name}; }document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;for (let slot = 1; slot <= 8; slot++) {const name = activeDayInfo.lessons[slot]; if (!name) continue;const row = document.createElement('div'); row.className = lesson-row ${activeLessonId === slot ? 'active' : ''};const currentSlotTime = timeTable.find(t => t.num === slot);const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";row.innerHTML = <div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>;listContainer.appendChild(row);}}buildMatrix();window.addEventListener('resize', resizeCanvas);canvas.width = window.innerWidth * 1.2;canvas.height = window.innerHeight * 1.2;generateFluidBackground();updateLogic();setInterval(updateLogic, 20000);
+    } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий день: ${activeDayInfo.name}`; }
+    document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
+    
+    for (let slot = 1; slot <= 8; slot++) {
+        const name = activeDayInfo.lessons[slot]; if (!name) continue;
+        const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
+        const currentSlotTime = timeTable.find(t => t.num === slot);
+        const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";
+        row.innerHTML = `<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>`;
+        listContainer.appendChild(row);
+    }
+}
+
+// Запуск модулей
+buildMatrix(); 
+window.addEventListener('resize', resizeCanvas);
+canvas.width = window.innerWidth * 1.2; 
+canvas.height = window.innerHeight * 1.2;
+generateFluidBackground();
+updateLogic(); 
+setInterval(updateLogic, 20000);
