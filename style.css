@@ -1,0 +1,276 @@
+:root {
+    --bg-glass: rgba(255, 255, 255, 0.08);
+    --border-glass: rgba(255, 255, 255, 0.12);
+    --text-main: #ffffff;
+    --text-sub: rgba(255, 255, 255, 0.5);
+    --accent: #00ffcc;
+    --shadow: rgba(0, 0, 0, 0.2);
+    --blur: 20px;
+}
+
+[data-theme="light"] {
+    --bg-glass: rgba(0, 0, 0, 0.05);
+    --border-glass: rgba(0, 0, 0, 0.08);
+    --text-main: #1d1d1f;
+    --text-sub: rgba(0, 0, 0, 0.4);
+    --accent: #ff3b30;
+    --shadow: rgba(0, 0, 0, 0.05);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #000000;
+    color: var(--text-main);
+    transition: color 0.5s ease;
+}
+
+#bg-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    transform: scale(1.05);
+}
+
+.swiper-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    display: flex;
+    will-change: transform;
+}
+
+.slide {
+    min-width: 100%;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+    padding-top: calc(20px + env(safe-area-inset-top));
+}
+
+.header-widget {
+    text-align: center;
+    margin-top: 10px;
+    will-change: transform;
+}
+
+.header-widget h1 {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    text-transform: uppercase;
+}
+
+.timer-card {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-radius: 28px;
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 8px 32px var(--shadow);
+    margin: 20px 0;
+}
+
+.timer-status {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-sub);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.timer-countdown {
+    font-size: 54px;
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.timer-sub {
+    font-size: 14px;
+    color: var(--text-sub);
+    font-weight: 500;
+}
+
+.day-schedule-box {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-radius: 28px;
+    padding: 16px;
+    flex-grow: 1;
+    max-height: 48vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 8px 32px var(--shadow);
+}
+
+.day-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.lessons-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+}
+
+.lesson-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.lesson-row.active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+}
+
+.lesson-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.lesson-num {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-sub);
+    width: 18px;
+}
+
+.lesson-row.active .lesson-num { color: var(--accent); }
+.lesson-name { font-size: 15px; font-weight: 600; }
+.lesson-meta { font-size: 13px; color: var(--text-sub); text-align: right; }
+
+.week-matrix-box {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-radius: 28px;
+    padding: 12px;
+    height: 82vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px var(--shadow);
+    margin-top: 10px;
+}
+
+.matrix-grid {
+    display: grid;
+    grid-template-columns: 24px repeat(5, 1fr);
+    grid-template-rows: auto repeat(8, 1fr);
+    gap: 4px;
+    height: 100%;
+    width: 100%;
+}
+
+.matrix-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 9px;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 2px;
+    background: rgba(255, 255, 255, 0.02);
+    line-height: 1.1;
+    word-break: break-word;
+}
+
+.matrix-cell.header, .matrix-cell.num-col {
+    background: transparent;
+    font-weight: 800;
+    color: var(--text-sub);
+    font-size: 11px;
+}
+
+.matrix-cell.empty {
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.05);
+    color: transparent;
+}
+
+.bottom-controls {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 15px;
+}
+
+.icon-btn {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    color: var(--text-sub);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.icon-btn:active { transform: scale(0.9); }
+.icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.spacer-btn { width: 40px; height: 40px; }
+
+.page-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-sub);
+    opacity: 0.4;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dot.active {
+    opacity: 1;
+    width: 16px;
+    border-radius: 3px;
+    background: var(--text-main);
+}
