@@ -1,5 +1,4 @@
-// Зашифрованный след от ключа (пароль: kirill2026)
-const HASHED_KEY = "6b4b9b9409893eb2bc49195a6ec8912e96d193fa062770281b37ecaa4f5b5b03";
+const HASHED_KEY = "accdb61253228627734b63ffdb49dd2dc708425b07e5fb618d92f46f342ca0be";
 
 // AI и стоковые фоны на выбор
 const BACKGROUNDS = {
