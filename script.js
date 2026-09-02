@@ -17,11 +17,11 @@ const daysData = {
     5: { name: "Пятница", short: "Пт", lessons: { 3: "Химия", 4: "Алгебра", 5: "Русский язык", 6: "Английский язык", 7: "Литература", 8: "Геометрия" }, rooms: {3:"316", 4:"313", 5:"308", 6:"305", 7:"308", 8:"313"} }
 };
 
-// 1. АВТОТЕМЫ ПО ВРЕМЕНИ СУТОК
+// 1. АВТОМАТИЧЕСКАЯ СМЕНА ТЕМЫ ДЕНЬ/НОЧЬ
 const currentHour = new Date().getHours();
 document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 
-// 2. ИНЕРЦИОННЫЙ СВАЙП-ЛОНЧЕР
+// 2. ИНЕРЦИОННЫЙ СВАЙП-ЛОНЧЕР ЭКРАНОВ
 const swiper = document.getElementById('swiper');
 let startX = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0;
 
@@ -47,13 +47,13 @@ function switchScreen(index) {
     generateFluidBackground();
 }
 
-// Смена фона по клику в пустую зону
+// Изменение сочного фона по клику в пустую зону экрана
 window.addEventListener('click', (e) => {
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
     generateFluidBackground();
 });
 
-// 3. СБОРКА НЕДЕЛЬНОЙ МАТРИЦЫ С АДАПТИВНЫМ СЖАТИЕМ ШРИФТОВ
+// 3. СБОРКА ТРЕНДОВОЙ СЕТКИ ВСЕЙ НЕДЕЛИ
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
     let corner = document.createElement('div'); corner.className = 'matrix-cell header'; corner.innerText = '№'; grid.appendChild(corner);
@@ -75,7 +75,7 @@ function buildMatrix() {
     }
 }
 
-// 4. ИНТЕЛЛЕКТУАЛЬНЫЙ СВЕРХЪЯРКИЙ 5-ЦВЕТНЫЙ AURORA MESH CANVAS ГЕНЕРАТОР
+// 4. СВЕРХЪЯРКИЙ 5-ЦВЕТНЫЙ AURORA MESH GRADIENT (БЕЗ ОШИБОК СИНТАКСИСА)
 const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
 function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); }
 
@@ -130,7 +130,7 @@ function generateFluidBackground() {
     });
 }
 
-// 5. 3D-ПАРАЛЛАКС И ГИРОСКОП
+// 5. ТРЕНДОВЫЙ ИНТЕРАКТИВНЫЙ 3D ПАРАЛЛАКС ГИРОСКОПА
 window.addEventListener('deviceorientation', e => {
     if (!e.gamma || !e.beta) return;
     let x = Math.min(Math.max(e.gamma, -30), 30) / 1.5; 
@@ -142,7 +142,7 @@ window.addEventListener('deviceorientation', e => {
 
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
 
-// 6. УМНАЯ ЛОГИКА ТАЙМЕРА И СЕГОДНЯ/ЗАВТРА
+// 6. УМНАЯ ЛОГИКА ОБРАТНОГО ОТСЧЕТА
 function updateLogic() {
     const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes();
     let isWeekend = (day === 0 || day === 6), targetDay = day;
@@ -182,4 +182,4 @@ function updateLogic() {
                 }
             }
         }
-        } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = Следующий день: ${activeDayInfo.name}; }document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;for (let slot = 1; slot <= 8; slot++) {const name = activeDayInfo.lessons[slot]; if (!name) continue;const row = document.createElement('div'); row.className = lesson-row ${activeLessonId === slot ? 'active' : ''};const currentSlotTime = timeTable.find(t => t.num === slot);const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";row.innerHTML = <div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>;listContainer.appendChild(row);}}// ИнициализацияbuildMatrix();window.addEventListener('resize', resizeCanvas);// Принудительно вызываем расчет размеров холста при стартеcanvas.width = window.innerWidth * 1.2;canvas.height = window.innerHeight * 1.2;generateFluidBackground();updateLogic();setInterval(updateLogic, 20000);
+        } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = Следующий день: ${activeDayInfo.name}; }document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;for (let slot = 1; slot <= 8; slot++) {const name = activeDayInfo.lessons[slot]; if (!name) continue;const row = document.createElement('div'); row.className = lesson-row ${activeLessonId === slot ? 'active' : ''};const currentSlotTime = timeTable.find(t => t.num === slot);const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";row.innerHTML = <div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>;listContainer.appendChild(row);}}// Старт приложенияbuildMatrix();window.addEventListener('resize', resizeCanvas);canvas.width = window.innerWidth * 1.2;canvas.height = window.innerHeight * 1.2;generateFluidBackground();updateLogic();setInterval(updateLogic, 20000);
