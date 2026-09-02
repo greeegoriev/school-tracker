@@ -3,25 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Расписание Кирилла</title>
-    <!-- Подключаем трендовый шрифт Inter -->
+    <title>Трекер Кирилла</title>
     <link rel="preconnect" href="https://googleapis.com">
     <link rel="preconnect" href="https://gstatic.com" crossorigin>
-    <link href="https://googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-overlay: rgba(255, 255, 255, 0.4);
-            --card-bg: rgba(255, 255, 255, 0.7);
+            --bg-overlay: rgba(255, 255, 255, 0.35);
+            --card-bg: rgba(255, 255, 255, 0.65);
             --text-main: #1d1d1f;
             --text-muted: #6e6e73;
             --accent: #0071e3;
             --status-color: #34c759;
             --border-glow: rgba(0, 113, 227, 0.15);
-            --glass-blur: blur(25px);
+            --blur: blur(30px);
         }
         body.dark-theme {
-            --bg-overlay: rgba(0, 0, 0, 0.45);
-            --card-bg: rgba(28, 28, 30, 0.75);
+            --bg-overlay: rgba(10, 10, 12, 0.45);
+            --card-bg: rgba(28, 28, 30, 0.7);
             --text-main: #f5f5f7;
             --text-muted: #8e8e93;
             --accent: #2997ff;
@@ -36,172 +35,157 @@
             align-items: center;
             min-height: 100vh;
             justify-content: flex-start;
-            background-color: #f5f5f7;
+            background-color: #0f0f11;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        /* Живой футуристичный фон */
+        .parallax-container {
+            position: fixed;
+            top: -10%; left: -10%; width: 120%; height: 120%;
+            z-index: -2;
             background-size: cover;
             background-position: center;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
-            transition: background 0.4s ease, background-color 0.4s ease;
-            box-sizing: border-box;
+            transition: background-image 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+        /* Трендовый Mesh-Градиент, переливающийся под картинкой */
+        .mesh-glow {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: radial-gradient(at 80% 20%, rgba(0, 113, 227, 0.15) 0px, transparent 50%),
+                        radial-gradient(at 20% 80%, rgba(52, 199, 89, 0.1) 0px, transparent 50%);
+            mix-blend-mode: screen;
         }
         .main-wrapper {
             background: var(--bg-overlay);
-            padding: 20px;
-            border-radius: 28px;
+            padding: 24px;
+            border-radius: 32px;
             width: 100%;
             max-width: 400px;
             box-sizing: border-box;
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            margin-top: 5vh;
+            gap: 18px;
+            margin-top: 6vh;
+            transform: translateZ(0); /* Аппаратное ускорение */
         }
         .controls-panel {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
             gap: 10px;
             width: 100%;
         }
-        .theme-btn {
+        .icon-btn {
             background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: var(--text-main);
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
             cursor: pointer;
             font-size: 18px;
             display: flex;
             justify-content: center;
             align-items: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            transition: transform 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .theme-btn:active { transform: scale(0.95); }
-        .bg-select {
-            background: var(--card-bg);
-            color: var(--text-main);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 0 12px;
-            height: 44px;
-            border-radius: 14px;
-            font-size: 18px;
-            outline: none;
-            flex: 1;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            -webkit-appearance: none;
-            appearance: none;
-            text-align: center;
-        }
+        .icon-btn:active { transform: scale(0.92); }
         .day-info {
             text-align: center;
             font-weight: 600;
             color: var(--text-muted);
             font-size: 13px;
             background: var(--card-bg);
-            padding: 10px;
-            border-radius: 14px;
-            letter-spacing: -0.1px;
+            padding: 12px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
+        /* Асимметричная модная карточка */
         .child-card {
             background: var(--card-bg);
-            border-radius: 22px;
-            padding: 20px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+            border-radius: 24px 8px 24px 24px; /* Неправильная футуристичная форма */
+            padding: 22px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
             border: 1px solid var(--border-glow);
-            box-sizing: border-box;
-            width: 100%;
+            position: relative;
         }
         .child-name {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 900;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             color: var(--accent);
             text-align: center;
             letter-spacing: -0.5px;
         }
         .status-box {
-            background: rgba(0,0,0,0.02);
-            border-radius: 16px;
-            padding: 16px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 18px;
+            padding: 18px;
             text-align: center;
         }
-        body.dark-theme .status-box { background: rgba(255,255,255,0.03); }
-        .current-lesson { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; }
-        .timer { font-size: 34px; font-weight: 900; color: var(--status-color); margin: 10px 0; letter-spacing: -0.5px; }
-        .next-break { font-size: 13px; color: var(--text-muted); line-height: 1.4; white-space: pre-line; font-weight: 500; }
+        body.dark-theme .status-box { background: rgba(255,255,255,0.04); }
+        .current-lesson { font-size: 17px; font-weight: 700; }
+        .timer { font-size: 36px; font-weight: 900; color: var(--status-color); margin: 8px 0; letter-spacing: -0.5px; }
+        .next-break { font-size: 13px; color: var(--text-muted); line-height: 1.5; white-space: pre-line; }
         
         .full-schedule-box {
             background: var(--card-bg);
-            border-radius: 22px;
-            padding: 16px;
-            box-sizing: border-box;
-            width: 100%;
+            border-radius: 24px;
+            padding: 18px;
         }
         .schedule-title {
-            font-size: 13px;
-            font-weight: 700;
-            margin-bottom: 12px;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 14px;
             text-align: center;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 1px;
         }
-        .schedule-list-container { display: flex; flex-direction: column; gap: 4px; }
+        .schedule-list-container { display: flex; flex-direction: column; gap: 6px; }
         .schedule-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 10px;
+            padding: 10px 14px;
             font-size: 13px;
-            border-radius: 10px;
+            border-radius: 12px;
             color: var(--text-main);
-            font-weight: 500;
-            gap: 10px;
+            font-weight: 600;
+            gap: 12px;
+            background: rgba(0,0,0,0.01);
         }
         .schedule-item.active-now {
             background: var(--accent);
             color: #ffffff;
             font-weight: 700;
-            box-shadow: 0 4px 14px rgba(0,113,227,0.25);
+            box-shadow: 0 8px 20px rgba(0,113,227,0.25);
         }
-        .lesson-text {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            flex: 1;
-        }
-        .time-text {
-            opacity: 0.6;
-            font-size: 11px;
-            font-weight: 600;
-            white-space: nowrap; /* Запрещаем перенос времени */
-            font-variant-numeric: tabular-nums; /* Делаем цифры ровными */
-            flex-shrink: 0; /* Не даем времени сжиматься */
-        }
+        .lesson-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .time-text { opacity: 0.6; font-size: 11px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; flex-shrink: 0; }
         .schedule-item.active-now .time-text { opacity: 0.9; }
-        #loading-screen { font-size: 16px; font-weight: 500; color: #8e8e93; text-align: center; margin-top: 45vh; }
+        #loading-screen { font-size: 16px; font-weight: 600; color: #8e8e93; text-align: center; margin-top: 45vh; }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">Загрузка системы стиля и времени...</div>
+    <div id="parallax-bg" class="parallax-container"></div>
+    <div class="mesh-glow"></div>
+
+    <div id="loading-screen">Загрузка космического интерфейса...</div>
 
     <div class="main-wrapper" id="app-screen" style="display:none;">
         <div class="controls-panel">
-            <button class="theme-btn" id="theme-toggle">🌓</button>
-            <select class="bg-select" id="bg-selector">
-                <option value="none">🖼️️️</option>
-                <option value="panel">🌆 Панельки 90-х</option>
-                <option value="cars">🚗 Ретро авто</option>
-                <option value="mc">🧱 Майнкрафт</option>
-            </select>
+            <button class="icon-btn" id="bg-toggle">🖼️</button>
+            <button class="icon-btn" id="theme-toggle">🌓</button>
         </div>
 
         <div class="day-info" id="current-time-display">--:--</div>
@@ -216,7 +200,7 @@
         </div>
 
         <div class="full-schedule-box">
-            <div class="schedule-title" id="list-title">Расписание</div>
+            <div class="schedule-title" id="list-title">Расписание дня</div>
             <div class="schedule-list-container" id="schedule-list"></div>
         </div>
     </div>
