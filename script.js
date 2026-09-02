@@ -83,30 +83,61 @@ function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height 
 
 function generateFluidBackground() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    
+    // Премиальные 5-цветные палитры 2026 года (неоновые взрывы и контрасты)
     const darkPalettes = [
-        ['#0d001a', '#ff0055', '#00ffcc'], 
-        ['#020c1b', '#0072ff', '#00f6ff'], 
-        ['#0a1908', '#00ff66', '#9900ff'], 
-        ['#140202', '#ff5e00', '#ff0055']
+        { base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, // Киберпанк: Розовый, Бирюза, Фиолетовый, Золото
+        { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, // Глубокий космос: Синий, Циан, Ультрафиолет, Маджента
+        { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }, // Кислотный неон: Лайм, Зеленый, Мята, Электрик
+        { base: '#0d0202', colors: ['#ff3300', '#ff0055', '#ffcc00', '#3b0066'] }  // Расплавленное солнце: Огонь, Рубин, Янтарь, Пурпур
     ];
+    
     const lightPalettes = [
-        ['#ffffff', '#ff007f', '#ffaa00'], 
-        ['#f5f7ff', '#4facfe', '#00f2fe'], 
-        ['#fafff5', '#11998e', '#38ef7d']
+        { base: '#ffffff', colors: ['#ff007f', '#ffaa00', '#00f2fe', '#4facfe'] }, // Радужный закат
+        { base: '#f4f7ff', colors: ['#fbc2eb', '#a6c1ee', '#fad0c4', '#ff9a9e'] }, // Нежная пастель (Зефир)
+        { base: '#fdfbf7', colors: ['#11998e', '#38ef7d', '#ffefba', '#ffffff'] }  // Тропический рассвет
     ];
-    const list = isDark ? darkPalettes : lightPalettes; const palette = list[Math.floor(Math.random() * list.length)];
     
-    let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    grad.addColorStop(0, palette[0]); 
-    grad.addColorStop(0.5, palette[1]); 
-    grad.addColorStop(1, palette[2]);
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const list = isDark ? darkPalettes : lightPalettes;
+    const selected = list[Math.floor(Math.random() * list.length)];
     
-    for(let i=0; i<3; i++) {
-        ctx.beginPath(); let x = Math.random() * canvas.width; let y = Math.random() * canvas.height; let r = Math.random() * (canvas.width / 1.5) + 150;
-        let radGrad = ctx.createRadialGradient(x, y, 20, x, y, r); radGrad.addColorStop(0, palette[1] + '33'); radGrad.addColorStop(1, 'transparent');
-        ctx.fillStyle = radGrad; ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    }
+    // 1. Заливаем базовый глубокий подложечный цвет
+    ctx.fillStyle = selected.base;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 2. Генерируем 4 независимых цветных световых пятна (сферы) в разных углах холста
+    const positions = [
+        { x: 0, y: 0 },
+        { x: canvas.width, y: 0 },
+        { x: 0, y: canvas.height },
+        { x: canvas.width, y: canvas.height }
+    ];
+    
+    positions.forEach((pos, index) => {
+        ctx.save();
+        // Смещаем центры сфер, чтобы при каждом клике они ложились уникально
+        let offsetX = (Math.random() - 0.5) * (canvas.width * 0.4);
+        let offsetY = (Math.random() - 0.5) * (canvas.height * 0.4);
+        let targetX = pos.x + offsetX;
+        let targetY = pos.y + offsetY;
+        
+        // Делаем сферы огромными, чтобы их края плавно смешивались в центре
+        let radius = Math.random() * (canvas.width * 0.8) + canvas.width * 0.4;
+        
+        let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
+        // Берем сочный цвет из палитры и добавляем плотную прозрачность для сочности
+        radialGrad.addColorStop(0, selected.colors[index] + '77'); 
+        radialGrad.addColorStop(0.5, selected.colors[index] + '22');
+        radialGrad.addColorStop(1, 'transparent');
+        
+        // Режим смешивания слоев "screen" создает эффект дорогого цифрового свечения
+        ctx.globalCompositeOperation = 'screen';
+        ctx.fillStyle = radialGrad;
+        ctx.beginPath();
+        ctx.arc(targetX, targetY, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
 }
 
 window.addEventListener('deviceorientation', e => {
