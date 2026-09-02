@@ -1,72 +1,99 @@
 const HASHED_KEY = "accdb61253228627734b63ffdb49dd2dc708425b07e5fb618d92f46f342ca0be";
 
-// AI и стоковые фоны на выбор
-const BACKGROUNDS = {
-    none: "",
-    panel: "url('https://unsplash.com')", // Стильная атмосферная застройка
-    cars: "url('https://unsplash.com')",  // Красивое автомобильное ретро
-    mc: "url('https://unsplash.com')"     // Кубический пиксель-арт ландшафт
+// 🖼️ МЕСТО ДЛЯ ВАШИХ КАРТИНОК (Утро, День, Вечер, Ночь)
+const BG_ALGO = {
+    morning: "https://unsplash.com", // Утро
+    day: "https://unsplash.com",     // День
+    evening: "https://unsplash.com", // Вечер
+    night: "https://unsplash.com"    // Ночь
 };
 
-async function hashKey(string) {
-    const utf8 = new TextEncoder().encode(string);
+const BG_MODES = ['auto', 'morning', 'day', 'evening', 'night'];
+
+async function hashKey(str) {
+    const utf8 = new TextEncoder().encode(str);
     const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
 async function checkAccess() {
     const urlParams = new URLSearchParams(window.location.search);
-    const keyFromUrl = urlParams.get('key');
-    if (keyFromUrl) {
-        const hashedInput = await hashKey(keyFromUrl);
-        if (hashedInput === HASHED_KEY) {
-            localStorage.setItem('school_access_hash', HASHED_KEY);
-            window.history.replaceState({}, document.title, window.location.pathname);
-            return true;
-        }
+    const key = urlParams.get('key');
+    if (key && await hashKey(key) === HASHED_KEY) {
+        localStorage.setItem('school_access_hash', HASHED_KEY);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return true;
     }
     return localStorage.getItem('school_access_hash') === HASHED_KEY;
 }
 
-// Переключатели кастомизации
-function initThemeAndBgs() {
+function getBgByTime() {
+    const hr = new Date().getHours();
+    if (hr >= 6 && hr < 12) return BG_ALGO.morning;
+    if (hr >= 12 && hr < 17) return BG_ALGO.day;
+    if (hr >= 17 && hr < 22) return BG_ALGO.evening;
+    return BG_ALGO.night;
+}
+
+function applyBackground() {
+    const bgContainer = document.getElementById('parallax-bg');
+    const mode = localStorage.getItem('bg_mode') || 'auto';
+    if (mode === 'auto') {
+        bgContainer.style.backgroundImage = `url('${getBgByTime()}')`;
+    } else {
+        bgContainer.style.backgroundImage = `url('${BG_ALGO[mode]}')`;
+    }
+}
+
+function initUX() {
     const themeBtn = document.getElementById('theme-toggle');
-    const bgSelect = document.getElementById('bg-selector');
-    
-    // Проверка сохраненных настроек
+    const bgBtn = document.getElementById('bg-toggle');
+    const bgContainer = document.getElementById('parallax-bg');
+
     if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-theme');
-    const savedBg = localStorage.getItem('bg_type') || 'none';
-    bgSelect.value = savedBg;
-    document.body.style.backgroundImage = BACKGROUNDS[savedBg];
+    applyBackground();
 
     themeBtn.addEventListener('click', () => {
         document.body.classList.toggle('dark-theme');
         localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
     });
 
-    bgSelect.addEventListener('change', (e) => {
-        const val = e.target.value;
-        document.body.style.backgroundImage = BACKGROUNDS[val];
-        localStorage.setItem('bg_type', val);
+    bgBtn.addEventListener('click', () => {
+        let cur = BG_MODES.indexOf(localStorage.getItem('bg_mode') || 'auto');
+        let next = (cur + 1) % BG_MODES.length;
+        localStorage.setItem('bg_mode', BG_MODES[next]);
+        applyBackground();
     });
+
+    // 📱 ТЕХНОЛОГИЧНЫЙ ПАРАЛЛАКС: завязка на гироскоп смартфона и мышь ПК
+    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+        window.addEventListener('deviceorientation', (e) => {
+            const x = Math.min(Math.max(e.gamma, -15), 15) * 0.8;
+            const y = Math.min(Math.max(e.beta - 45, -15), 15) * 0.8;
+            bgContainer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.05)`;
+        });
+    } else {
+        window.addEventListener('mousemove', (e) => {
+            const x = (e.clientX - window.innerWidth / 2) * 0.03;
+            const y = (e.clientY - window.innerHeight / 2) * 0.03;
+            bgContainer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.05)`;
+        });
+    }
 }
 
-// Запуск системы
 async function init() {
     document.getElementById('loading-screen').style.display = 'none';
     if (await checkAccess()) {
         document.getElementById('app-screen').style.display = 'block';
-        initThemeAndBgs();
+        initUX();
         updateTracker();
         setInterval(updateTracker, 1000);
     } else {
-        document.body.innerHTML = "<div style='text-align:center; margin-top:100px;'><h1 style='font-size:48px; margin-bottom:10px;'>404</h1><p style='color:#666;'>Страница не найдена или доступ ограничен.</p></div>";
+        document.body.innerHTML = "<div style='text-align:center; margin-top:100px;'><h1 style='font-size:48px;'>404</h1><p style='color:#666;'>Доступ ограничен.</p></div>";
     }
 }
 init();
 
-// БАЗА ДАННЫХ
 const timeSlots = [
     { number: 1, start: "08:30", end: "09:10", breakAfter: 10 },
     { number: 2, start: "09:20", end: "10:00", breakAfter: 20 },
@@ -97,39 +124,64 @@ function formatRemainingTime(secondsTotal) {
     const seconds = secondsTotal % 60;
     return minutes + " мин. " + (seconds < 10 ? "0" : "") + seconds + " сек.";
 }
-
-// Динамические статусы-цвета
 function setStatusColors(type, secondsLeft = 9999) {
     const root = document.documentElement;
     if (type === 'lesson') {
-        if (secondsLeft <= 300) { // Меньше 5 минут до конца урока
-            root.style.setProperty('--status-color', '#ff9f1c'); // Оранжевый
-            root.style.setProperty('--border-glow', '#ff9f1c');
+        if (secondsLeft <= 300) {
+            root.style.setProperty('--status-color', '#ff9f1c'); // Предупреждающий оранжевый
+            root.style.setProperty('--border-glow', 'rgba(255, 159, 28, 0.4)');
         } else {
-            root.style.setProperty('--status-color', '#4a90e2'); // Модный синий
-            root.style.setProperty('--border-glow', 'transparent');
+            root.style.setProperty('--status-color', 'var(--accent)');
+            root.style.setProperty('--border-glow', 'rgba(0, 113, 227, 0.15)');
         }
     } else if (type === 'break') {
-        root.style.setProperty('--status-color', '#2ec4b6'); // Расслабляющий бирюзовый
-        root.style.setProperty('--border-glow', '#2ec4b6');
+        root.style.setProperty('--status-color', '#34c759'); // Зеленый для перемены
+        root.style.setProperty('--border-glow', 'rgba(52, 199, 89, 0.4)');
     } else {
-        root.style.setProperty('--status-color', '#999999');
+        root.style.setProperty('--status-color', '#8e8e93');
         root.style.setProperty('--border-glow', 'transparent');
     }
+}
+
+function renderScheduleTable(dayNum, isTomorrow) {
+    const listContainer = document.getElementById('schedule-list');
+    const titleContainer = document.getElementById('list-title');
+    const daysText = {1:"Понедельник", 2:"Вторник", 3:"Среда", 4:"Четверг", 5:"Пятница"};
+    
+    titleContainer.innerText = (isTomorrow ? "Завтра: " : "Сегодня: ") + daysText[dayNum];
+    
+    const lessons = weeklyLessons[dayNum] || {};
+    let html = "";
+    
+    timeSlots.forEach(slot => {
+        const name = lessons[slot.number];
+        if (name) {
+            let activeClass = "";
+            if (!isTomorrow) {
+                const now = new Date();
+                const curSec = (now.getHours()*60 + now.getMinutes())*60 + now.getSeconds();
+                if (curSec >= timeToMinutes(slot.start)*60 && curSec < timeToMinutes(slot.end)*60) {
+                    activeClass = " active-now";
+                }
+            }
+            html += `<div class="schedule-item${activeClass}"><span class="lesson-text">${slot.number}. ${name}</span><span class="time-text">${slot.start} - ${slot.end}</span></div>`;
+        }
+    });
+    listContainer.innerHTML = html;
 }
 
 function updateTracker() {
     const now = new Date();
     let dayOfWeek = now.getDay();
     
-    document.getElementById('current-time-display').innerText = "Сегодня: " + now.toLocaleDateString('ru-RU', { weekday: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('current-time-display').innerText = now.toLocaleDateString('ru-RU', { weekday: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     if (dayOfWeek === 0 || dayOfWeek === 6) {
         document.getElementById('c1-title').innerText = "Выходные дни";
         document.getElementById('c1-timer').innerText = "🎉";
         document.getElementById('c1-break').innerText = "Отдых";
         setStatusColors('rest');
-        renderScheduleTable(1, true); // На выходных показываем понедельник
+        renderScheduleTable(1, true);
         return;
     }
 
@@ -143,49 +195,18 @@ function updateTracker() {
     const lastSlot = timeSlots.find(s => s.number === lastLessonNum);
     const schoolEndSec = timeToMinutes(lastSlot.end) * 60;
 
-    // Решаем, какое расписание выводить снизу
     if (totalCurrentSeconds >= schoolEndSec) {
-        // День окончен -> выводим расписание на завтра
         let nextDay = dayOfWeek + 1;
-        if (nextDay > 5) nextDay = 1; // Если пятница вечер — показываем пн
+        if (nextDay > 5) nextDay = 1;
         renderScheduleTable(nextDay, true);
     } else {
-        // День еще идет -> выводим текущее
         renderScheduleTable(dayOfWeek, false);
     }
 
-    processChildSchedule(dayOfWeek, totalCurrentSeconds, todayLessons, lessonNumbers, schoolEndSec);
+    processChildSchedule(totalCurrentSeconds, todayLessons, lessonNumbers, schoolEndSec);
 }
 
-function renderScheduleTable(dayNum, isTomorrow) {
-    const listContainer = document.getElementById('schedule-list');
-    const titleContainer = document.getElementById('list-title');
-    const daysText = {1:"Понедельник", 2:"Вторник", 3:"Среда", 4:"Четверг", 5:"Пятница"};
-    
-    titleContainer.innerText = (isTomorrow ? "Расписание на завтра (" : "Расписание на сегодня (") + daysText[dayNum] + ")";
-    
-    const lessons = weeklyLessons[dayNum] || {};
-    let html = "";
-    
-    timeSlots.forEach(slot => {
-        const name = lessons[slot.number];
-        if (name) {
-            let activeClass = "";
-            // Подсветка текущего урока в таблице (только если смотрим "сегодня")
-            if (!isTomorrow) {
-                const now = new Date();
-                const curSec = (now.getHours()*60 + now.getMinutes())*60 + now.getSeconds();
-                if (curSec >= timeToMinutes(slot.start)*60 && curSec < timeToMinutes(slot.end)*60) {
-                    activeClass = " active-now";
-                }
-            }
-              html += `<div class="schedule-item${activeClass}"><span class="lesson-text">${slot.number}. ${name}</span><span class="time-text">${slot.start} - ${slot.end}</span></div>`;
-        }
-    });
-    listContainer.innerHTML = html;
-}
-
-function processChildSchedule(dayOfWeek, totalCurrentSeconds, todayLessons, lessonNumbers, schoolEndSec) {
+function processChildSchedule(totalCurrentSeconds, todayLessons, lessonNumbers, schoolEndSec) {
     const prefix = 'c1';
     const firstLessonNum = lessonNumbers[0];
     const firstSlot = timeSlots.find(s => s.number === firstLessonNum);
@@ -214,4 +235,37 @@ function processChildSchedule(dayOfWeek, totalCurrentSeconds, todayLessons, less
         const slotEndSec = timeToMinutes(slot.end) * 60;
         const lessonName = todayLessons[slot.number];
 
-if (totalCurrentSeconds >= slotStartSec && totalCurrentSeconds < slotEndSec) {const diff = slotEndSec - totalCurrentSeconds;if (lessonName) {document.getElementById(prefix + '-title').innerText = "Сейчас: " + lessonName;document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);const nextLessonNum = lessonNumbers.find(num => num > slot.number);document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Перемена: " + slot.breakAfter + " мин. \nДалее: " + todayLessons[nextLessonNum] : "Перемена: " + slot.breakAfter + " мин. (Последний урок!)";setStatusColors('lesson', diff);} else {document.getElementById(prefix + '-title').innerText = "Свободное время (Окно)";document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);const nextLessonNum = lessonNumbers.find(num => num > slot.number);document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Далее: " + todayLessons[nextLessonNum] : "Скоро домой";setStatusColors('rest');}return;}if (i < timeSlots.length - 1) {const nextSlot = timeSlots[i + 1];const nextSlotStartSec = timeToMinutes(nextSlot.start) * 60;if (totalCurrentSeconds >= slotEndSec && totalCurrentSeconds < nextSlotStartSec) {const diff = nextSlotStartSec - totalCurrentSeconds;const nextLessonNum = lessonNumbers.find(num => num > slot.number);document.getElementById(prefix + '-title').innerText = "Идет перемена";document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Далее: " + todayLessons[nextLessonNum] : "Идем домой!";setStatusColors('break');return;}}}}
+        if (totalCurrentSeconds >= slotStartSec && totalCurrentSeconds < slotEndSec) {
+            const diff = slotEndSec - totalCurrentSeconds;
+            if (lessonName) {
+                document.getElementById(prefix + '-title').innerText = "Сейчас: " + lessonName;
+                document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);
+                const nextLessonNum = lessonNumbers.find(num => num > slot.number);
+                document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Перемена: " + slot.breakAfter + " мин. \nДалее: " + todayLessons[nextLessonNum] : "Перемена: " + slot.breakAfter + " мин. (Последний урок!)";
+                setStatusColors('lesson', diff);
+            } else {
+                document.getElementById(prefix + '-title').innerText = "Свободное время (Окно)";
+                document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);
+                const nextLessonNum = lessonNumbers.find(num => num > slot.number);
+                document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Далее: " + todayLessons[nextLessonNum] : "Скоро домой";
+                setStatusColors('rest');
+            }
+            return;
+        }
+
+        if (i < timeSlots.length - 1) {
+            const nextSlot = timeSlots[i + 1];
+            const nextSlotStartSec = timeToMinutes(nextSlot.start) * 60;
+
+            if (totalCurrentSeconds >= slotEndSec && totalCurrentSeconds < nextSlotStartSec) {
+                const diff = nextSlotStartSec - totalCurrentSeconds;
+                const nextLessonNum = lessonNumbers.find(num => num > slot.number);
+                document.getElementById(prefix + '-title').innerText = "Идет перемена";
+                document.getElementById(prefix + '-timer').innerText = formatRemainingTime(diff);
+                document.getElementById(prefix + '-break').innerText = nextLessonNum ? "Далее: " + todayLessons[nextLessonNum] : "Идем домой!";
+                setStatusColors('break');
+                return;
+            }
+        }
+    }
+}
