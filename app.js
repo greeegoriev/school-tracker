@@ -1,11 +1,11 @@
 const HASHED_KEY = "accdb61253228627734b63ffdb49dd2dc708425b07e5fb618d92f46f342ca0be";
 
-// 🖼️ МЕСТО ДЛЯ ВАШИХ КАРТИНОК (Утро, День, Вечер, Ночь)
+// 🖼️ СЮДА ВСТАВЛЯЙТЕ СВОИ КАРТИНКИ
 const BG_ALGO = {
-    morning: "https://unsplash.com", // Утро
-    day: "https://unsplash.com",     // День
-    evening: "https://unsplash.com", // Вечер
-    night: "https://unsplash.com"    // Ночь
+    morning: "https://unsplash.com",
+    day: "https://unsplash.com",
+    evening: "https://unsplash.com",
+    night: "https://unsplash.com"
 };
 
 const BG_MODES = ['auto', 'morning', 'day', 'evening', 'night'];
@@ -39,9 +39,9 @@ function applyBackground() {
     const bgContainer = document.getElementById('parallax-bg');
     const mode = localStorage.getItem('bg_mode') || 'auto';
     if (mode === 'auto') {
-        bgContainer.style.backgroundImage = `url('${getBgByTime()}')`;
+        bgContainer.style.backgroundImage = "url('" + getBgByTime() + "')";
     } else {
-        bgContainer.style.backgroundImage = `url('${BG_ALGO[mode]}')`;
+        bgContainer.style.backgroundImage = "url('" + BG_ALGO[mode] + "')";
     }
 }
 
@@ -65,18 +65,17 @@ function initUX() {
         applyBackground();
     });
 
-    // 📱 ТЕХНОЛОГИЧНЫЙ ПАРАЛЛАКС: завязка на гироскоп смартфона и мышь ПК
     if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== 'function') {
         window.addEventListener('deviceorientation', (e) => {
             const x = Math.min(Math.max(e.gamma, -15), 15) * 0.8;
             const y = Math.min(Math.max(e.beta - 45, -15), 15) * 0.8;
-            bgContainer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.05)`;
+            bgContainer.style.transform = "translate3d(" + x + "px, " + y + "px, 0) scale(1.05)";
         });
     } else {
         window.addEventListener('mousemove', (e) => {
             const x = (e.clientX - window.innerWidth / 2) * 0.03;
             const y = (e.clientY - window.innerHeight / 2) * 0.03;
-            bgContainer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.05)`;
+            bgContainer.style.transform = "translate3d(" + x + "px, " + y + "px, 0) scale(1.05)";
         });
     }
 }
@@ -124,18 +123,19 @@ function formatRemainingTime(secondsTotal) {
     const seconds = secondsTotal % 60;
     return minutes + " мин. " + (seconds < 10 ? "0" : "") + seconds + " сек.";
 }
+
 function setStatusColors(type, secondsLeft = 9999) {
     const root = document.documentElement;
     if (type === 'lesson') {
         if (secondsLeft <= 300) {
-            root.style.setProperty('--status-color', '#ff9f1c'); // Предупреждающий оранжевый
+            root.style.setProperty('--status-color', '#ff9f1c');
             root.style.setProperty('--border-glow', 'rgba(255, 159, 28, 0.4)');
         } else {
             root.style.setProperty('--status-color', 'var(--accent)');
             root.style.setProperty('--border-glow', 'rgba(0, 113, 227, 0.15)');
         }
     } else if (type === 'break') {
-        root.style.setProperty('--status-color', '#34c759'); // Зеленый для перемены
+        root.style.setProperty('--status-color', '#34c759');
         root.style.setProperty('--border-glow', 'rgba(52, 199, 89, 0.4)');
     } else {
         root.style.setProperty('--status-color', '#8e8e93');
@@ -164,7 +164,7 @@ function renderScheduleTable(dayNum, isTomorrow) {
                     activeClass = " active-now";
                 }
             }
-            html += `<div class="schedule-item${activeClass}"><span class="lesson-text">${slot.number}. ${name}</span><span class="time-text">${slot.start} - ${slot.end}</span></div>`;
+            html += '<div class="schedule-item' + activeClass + '"><span class="lesson-text">' + slot.number + '. ' + name + '</span><span class="time-text">' + slot.start + ' - ' + slot.end + '</span></div>';
         }
     });
     listContainer.innerHTML = html;
