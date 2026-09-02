@@ -17,15 +17,11 @@ const daysData = {
     5: { name: "Пятница", short: "Пт", lessons: { 3: "Химия", 4: "Алгебра", 5: "Русский язык", 6: "Английский язык", 7: "Литература", 8: "Геометрия" }, rooms: {3:"316", 4:"313", 5:"308", 6:"305", 7:"308", 8:"313"} }
 };
 
+// 1. АВТОТЕМЫ ПО ВРЕМЕНИ СУТОК
 const currentHour = new Date().getHours();
 document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 
-document.getElementById('theme-toggle').addEventListener('click', () => {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    document.documentElement.setAttribute('data-theme', currentTheme === 'dark' ? 'light' : 'dark');
-    generateFluidBackground();
-});
-
+// 2. ИНЕРЦИОННЫЙ СВАЙП-ЛОНЧЕР
 const swiper = document.getElementById('swiper');
 let startX = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0;
 
@@ -51,11 +47,13 @@ function switchScreen(index) {
     generateFluidBackground();
 }
 
+// Смена фона по клику в пустую зону
 window.addEventListener('click', (e) => {
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
     generateFluidBackground();
 });
 
+// 3. СБОРКА НЕДЕЛЬНОЙ МАТРИЦЫ С АДАПТИВНЫМ СЖАТИЕМ ШРИФТОВ
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
     let corner = document.createElement('div'); corner.className = 'matrix-cell header'; corner.innerText = '№'; grid.appendChild(corner);
@@ -69,7 +67,6 @@ function buildMatrix() {
             cell.className = name ? 'matrix-cell' : 'matrix-cell empty';
             if (name) {
                 cell.innerText = name;
-                // Умная инспекция длины слова: динамически сжимаем шрифт для супер-длинных названий
                 if (name.length > 11) cell.style.fontSize = '7px';
                 if (name.length > 14) cell.style.fontSize = '6px';
             }
@@ -78,34 +75,32 @@ function buildMatrix() {
     }
 }
 
+// 4. ИНТЕЛЛЕКТУАЛЬНЫЙ СВЕРХЪЯРКИЙ 5-ЦВЕТНЫЙ AURORA MESH CANVAS ГЕНЕРАТОР
 const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
 function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); }
 
 function generateFluidBackground() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     
-    // Премиальные 5-цветные палитры 2026 года (неоновые взрывы и контрасты)
     const darkPalettes = [
-        { base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, // Киберпанк: Розовый, Бирюза, Фиолетовый, Золото
-        { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, // Глубокий космос: Синий, Циан, Ультрафиолет, Маджента
-        { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }, // Кислотный неон: Лайм, Зеленый, Мята, Электрик
-        { base: '#0d0202', colors: ['#ff3300', '#ff0055', '#ffcc00', '#3b0066'] }  // Расплавленное солнце: Огонь, Рубин, Янтарь, Пурпур
+        { base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
+        { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
+        { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] },
+        { base: '#0d0202', colors: ['#ff3300', '#ff0055', '#ffcc00', '#3b0066'] }
     ];
     
     const lightPalettes = [
-        { base: '#ffffff', colors: ['#ff007f', '#ffaa00', '#00f2fe', '#4facfe'] }, // Радужный закат
-        { base: '#f4f7ff', colors: ['#fbc2eb', '#a6c1ee', '#fad0c4', '#ff9a9e'] }, // Нежная пастель (Зефир)
-        { base: '#fdfbf7', colors: ['#11998e', '#38ef7d', '#ffefba', '#ffffff'] }  // Тропический рассвет
+        { base: '#ffffff', colors: ['#ff007f', '#ffaa00', '#00f2fe', '#4facfe'] },
+        { base: '#f4f7ff', colors: ['#fbc2eb', '#a6c1ee', '#fad0c4', '#ff9a9e'] },
+        { base: '#fdfbf7', colors: ['#11998e', '#38ef7d', '#ffefba', '#ffffff'] }
     ];
     
     const list = isDark ? darkPalettes : lightPalettes;
     const selected = list[Math.floor(Math.random() * list.length)];
     
-    // 1. Заливаем базовый глубокий подложечный цвет
     ctx.fillStyle = selected.base;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // 2. Генерируем 4 независимых цветных световых пятна (сферы) в разных углах холста
     const positions = [
         { x: 0, y: 0 },
         { x: canvas.width, y: 0 },
@@ -115,22 +110,17 @@ function generateFluidBackground() {
     
     positions.forEach((pos, index) => {
         ctx.save();
-        // Смещаем центры сфер, чтобы при каждом клике они ложились уникально
         let offsetX = (Math.random() - 0.5) * (canvas.width * 0.4);
         let offsetY = (Math.random() - 0.5) * (canvas.height * 0.4);
         let targetX = pos.x + offsetX;
         let targetY = pos.y + offsetY;
-        
-        // Делаем сферы огромными, чтобы их края плавно смешивались в центре
         let radius = Math.random() * (canvas.width * 0.8) + canvas.width * 0.4;
         
         let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
-        // Берем сочный цвет из палитры и добавляем плотную прозрачность для сочности
         radialGrad.addColorStop(0, selected.colors[index] + '77'); 
         radialGrad.addColorStop(0.5, selected.colors[index] + '22');
         radialGrad.addColorStop(1, 'transparent');
         
-        // Режим смешивания слоев "screen" создает эффект дорогого цифрового свечения
         ctx.globalCompositeOperation = 'screen';
         ctx.fillStyle = radialGrad;
         ctx.beginPath();
@@ -140,6 +130,7 @@ function generateFluidBackground() {
     });
 }
 
+// 5. 3D-ПАРАЛЛАКС И ГИРОСКОП
 window.addEventListener('deviceorientation', e => {
     if (!e.gamma || !e.beta) return;
     let x = Math.min(Math.max(e.gamma, -30), 30) / 1.5; 
@@ -151,6 +142,7 @@ window.addEventListener('deviceorientation', e => {
 
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
 
+// 6. УМНАЯ ЛОГИКА ТАЙМЕРА И СЕГОДНЯ/ЗАВТРА
 function updateLogic() {
     const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes();
     let isWeekend = (day === 0 || day === 6), targetDay = day;
@@ -190,11 +182,4 @@ function updateLogic() {
                 }
             }
         }
-    } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий день: ${activeDayInfo.name}`; }
-    document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
-    
-    for (let slot = 1; slot <= 8; slot++) {
-        const name = activeDayInfo.lessons[slot]; if (!name) continue;
-        const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
-        const currentSlotTime = timeTable.find(t => t.num === slot);
-        const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";row.innerHTML = <div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>;listContainer.appendChild(row);}}buildMatrix(); window.addEventListener('load', resizeCanvas); updateLogic(); setInterval(updateLogic, 20000);
+        } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = Следующий день: ${activeDayInfo.name}; }document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;for (let slot = 1; slot <= 8; slot++) {const name = activeDayInfo.lessons[slot]; if (!name) continue;const row = document.createElement('div'); row.className = lesson-row ${activeLessonId === slot ? 'active' : ''};const currentSlotTime = timeTable.find(t => t.num === slot);const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";row.innerHTML = <div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>;listContainer.appendChild(row);}}// ИнициализацияbuildMatrix();window.addEventListener('resize', resizeCanvas);// Принудительно вызываем расчет размеров холста при стартеcanvas.width = window.innerWidth * 1.2;canvas.height = window.innerHeight * 1.2;generateFluidBackground();updateLogic();setInterval(updateLogic, 20000);
