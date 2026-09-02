@@ -1,219 +1,642 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Расписание Кирилла</title>
-    <!-- Исправленное подключение шрифта Inter -->
-    <link rel="preconnect" href="https://googleapis.com">
-    <link rel="preconnect" href="https://gstatic.com" crossorigin>
-    <link href="https://googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-base: #f7f9fc;
-            --bg-overlay: rgba(255, 255, 255, 0.25);
-            --card-bg: rgba(255, 255, 255, 0.65);
+            --bg-blur: 20px;
+            --card-radius: 24px;
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .light-theme {
             --text-main: #1d1d1f;
-            --text-muted: #6e6e73;
+            --text-sub: #6e6e73;
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: rgba(0, 0, 0, 0.05);
             --accent: #0071e3;
-            --status-color: #34c759;
-            --border-glow: rgba(255, 255, 255, 0.8);
-            --blur: blur(35px);
+            --accent-bg: rgba(0, 113, 227, 0.15);
+            --card-active: rgba(255, 255, 255, 0.75);
         }
-        body.dark-theme {
-            --bg-base: #08090c;
-            --bg-overlay: rgba(15, 16, 20, 0.45);
-            --card-bg: rgba(30, 30, 35, 0.6);
+
+        .dark-theme {
             --text-main: #f5f5f7;
-            --text-muted: #8e8e93;
+            --text-sub: #86868b;
+            --glass-bg: rgba(20, 20, 25, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: rgba(0, 0, 0, 0.3);
             --accent: #2997ff;
-            --border-glow: rgba(255, 255, 255, 0.05);
+            --accent-bg: rgba(41, 151, 255, 0.2);
+            --card-active: rgba(30, 30, 40, 0.75);
         }
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+
+        * {
             margin: 0;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e1b4b, #2e1065);
+            background-attachment: fixed;
             min-height: 100vh;
-            justify-content: flex-start;
-            background-color: var(--bg-base);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
             overflow-x: hidden;
-            box-sizing: border-box;
-            transition: background-color 0.5s ease;
-            padding-bottom: 90px;
+            padding: 20px 16px cubic-bezier(0.1, 0, 0.1, 1);
+            transition: var(--transition);
         }
-        .parallax-container {
+
+        #bg-canvas {
             position: fixed;
-            top: -10%; left: -10%; width: 120%; height: 120%;
-            z-index: -2;
-            background-size: cover;
-            background-position: center;
-            transition: background-image 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            will-change: transform;
-        }
-        .mesh-glow {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             z-index: -1;
-            background: radial-gradient(at 20% 15%, #a1c4fd 0px, transparent 50%),
-                        radial-gradient(at 80% 10%, #c2e9fb 0px, transparent 40%),
-                        radial-gradient(at 50% 85%, #f6d365 0px, transparent 45%);
-            opacity: 0.6;
+            pointer-events: none;
+            transition: opacity 1s ease;
         }
-        body.dark-theme .mesh-glow {
-            background: radial-gradient(at 10% 20%, #1a365d 0px, transparent 40%),
-                        radial-gradient(at 90% 10%, #0f4c5c 0px, transparent 35%),
-                        radial-gradient(at 50% 80%, #5c1328 0px, transparent 45%);
-            mix-blend-mode: screen;
-            opacity: 0.4;
+
+        .app-container {
+            width: 100%;
+            max-width: 440px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 40px;
+            z-index: 1;
         }
-        .main-wrapper {
-            background: var(--bg-overlay);
+
+        header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--bg-blur));
+            -webkit-backdrop-filter: blur(var(--bg-blur));
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px var(--glass-shadow);
+            border-radius: var(--card-radius);
             padding: 24px;
-            border-radius: 40px;
-            width: 100%;
-            max-width: 390px;
-            box-sizing: border-box;
-            backdrop-filter: var(--blur);
-            -webkit-backdrop-filter: var(--blur);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255,255,255,0.6);
-            border: 1px solid var(--border-glow);
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            margin-top: 4vh;
-            transform: translateZ(0);
-        }
-        
-        /* ИСПРАВЛЕННЫЕ СТИЛИ ДЛЯ ФОРМЫ ВХОДА */
-        #login-form {
-            display: none; /* Контролируется через JS */
-            flex-direction: column;
-            gap: 16px;
             text-align: center;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        #login-form h2 { 
-            font-size: 20px; 
-            font-weight: 800; 
-            margin: 0 0 4px 0; 
-            color: var(--text-main);
-            display: block;
-        }
-        
-        .input-container {
             position: relative;
-            display: flex;
+            overflow: hidden;
+        }
+
+        header h1 {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+            background: linear-gradient(90deg, var(--text-main), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: inline-flex;
             align-items: center;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .pass-input {
-            background: rgba(255,255,255,0.6);
-            border: 1px solid rgba(0,0,0,0.12);
-            padding: 14px 45px 14px 14px;
-            border-radius: 16px;
-            font-size: 15px;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 14px;
             font-weight: 600;
-            outline: none;
-            text-align: center;
-            color: var(--text-main);
-            transition: all 0.2s;
-            width: 100%;
-            box-sizing: border-box;
-            display: block;
+            background: var(--accent-bg);
+            color: var(--accent);
+            margin-top: 10px;
+            border: 1px solid rgba(41, 151, 255, 0.2);
         }
-        body.dark-theme .pass-input { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); }
-        .pass-input:focus { border-color: var(--accent); background: rgba(255,255,255,0.9); }
-        
-        .eye-btn {
-            position: absolute;
-            right: 14px;
-            background: transparent;
-            border: none;
+
+        .controls-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--bg-blur));
+            -webkit-backdrop-filter: blur(var(--bg-blur));
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 16px var(--glass-shadow);
+            color: var(--text-main);
+            padding: 14px;
+            border-radius: 18px;
+            font-weight: 600;
+            font-size: 14px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-            z-index: 2;
-        }
-        .eye-btn:hover { opacity: 1; }
-        .eye-btn svg {
-            width: 20px;
-            height: 20px;
-            fill: none;
-            stroke: var(--text-main);
-            stroke-width: 1.5;
-            stroke-linecap: round;
-            stroke-linejoin: round;
+            gap: 8px;
+            transition: var(--transition);
         }
 
-        .login-btn {
-            background: var(--text-main);
-            color: var(--bg-base);
-            border: none;
-            padding: 14px;
-            border-radius: 16px;
+        .btn:active {
+            transform: scale(0.96);
+            background: var(--glass-border);
+        }
+
+        .day-title {
+            font-size: 18px;
+            font-weight: 700;
+            padding-left: 8px;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .day-title span {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-sub);
+            background: var(--glass-bg);
+            padding: 4px 10px;
+            border-radius: 10px;
+        }
+
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .lesson-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--bg-blur));
+            -webkit-backdrop-filter: blur(var(--bg-blur));
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 24px var(--glass-shadow);
+            border-radius: var(--card-radius);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .lesson-card.active {
+            background: var(--card-active);
+            border-color: var(--accent);
+            box-shadow: 0 12px 32px rgba(41, 151, 255, 0.25);
+            transform: scale(1.02);
+        }
+
+        .lesson-card.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 5px;
+            background: var(--accent);
+        }
+
+        .lesson-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .lesson-num-time {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .lesson-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .lesson-room {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-sub);
+        }
+
+        .lesson-timer {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .timer-val {
             font-size: 15px;
             font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-            box-sizing: border-box;
-            display: block;
+            color: var(--accent);
         }
-        .login-btn:active { transform: scale(0.97); }
-        body.dark-theme .login-btn { background: #f5f5f7; color: #08090c; }
-        
-        /* СТИЛИ ОСТАЛЬНЫХ ЭЛЕМЕНТОВ */
-        .bottom-nav {
-            position: fixed;
-            bottom: 24px;
+
+        .timer-lbl {
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-top: 2px;
+        }
+
+        .break-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed var(--glass-border);
+            border-radius: 16px;
+            padding: 10px 20px;
             display: flex;
-            gap: 16px;
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 8px 16px;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-            border: 1px solid rgba(255,255,255,0.4);
-            z-index: 10;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-sub);
+            transition: var(--transition);
         }
-        body.dark-theme .bottom-nav { background: rgba(30, 30, 35, 0.5); border: 1px solid rgba(255,255,255,0.05); }
-        .icon-btn {
-            background: transparent; border: none; color: var(--text-main);
-            width: 44px; height: 44px; cursor: pointer;
-            display: flex; justify-content: center; align-items: center;
-            transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+        .break-card.active {
+            background: var(--accent-bg);
+            border-style: solid;
+            border-color: var(--accent);
+            color: var(--text-main);
         }
-        .icon-btn svg { width: 22px; height: 22px; fill: none; stroke: var(--text-main); stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
-        .icon-btn:hover { transform: scale(1.1); }
-        
-        .day-info { text-align: center; font-weight: 700; color: var(--text-main); font-size: 13px; background: rgba(255,255,255,0.3); padding: 10px 14px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.4); text-transform: uppercase; letter-spacing: 0.5px; }
-        body.dark-theme .day-info { background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.01); }
-        .child-card { background: var(--card-bg); border-radius: 30px; padding: 24px; border: 1px solid rgba(255,255,255,0.4); box-sizing: border-box; width: 100%; }
-        body.dark-theme .child-card { border: 1px solid rgba(255,255,255,0.04); }
-        .child-name { font-size: 26px; font-weight: 900; margin-bottom: 14px; color: var(--text-main); text-align: center; letter-spacing: -0.5px; }
-        .status-box { background: rgba(255,255,255,0.5); border-radius: 20px; padding: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.5); }
-        body.dark-theme .status-box { background: rgba(0,0,0,0.12); border: 1px solid transparent; }
-        .current-lesson { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
-        .timer { font-size: 36px; font-weight: 900; color: var(--status-color); margin: 8px 0; letter-spacing: -0.5px; line-height: 1.2; }
-        .next-break { font-size: 14px; color: var(--text-main); line-height: 1.5; font-weight: 600; }
-        .full-schedule-box { background: var(--card-bg); border-radius: 30px; padding: 20px; border: 1px solid rgba(255,255,255,0.4); }
-        body.dark-theme .full-schedule-box { border: 1px solid rgba(255,255,255,0.04); }
-        .schedule-title { font-size: 11px; font-weight: 800; margin-bottom: 14px; text-align: center; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-        .schedule-list-container { display: flex; flex-direction: column; gap: 6px; }
-        .schedule-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; font-size: 14px; border-radius: 14px; color: var(--text-main); font-weight: 600; gap: 12px; background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.1); }
-        body.dark-theme .schedule-item { background: rgba(0,0,0,0.08); border: 1px solid transparent; }
-        .schedule-item.active-now { background: var(--text-main); color: var(--bg-base); font-weight: 800; box-shadow: 0 10px 20px rgba(0,0,0,0.06); border-color: transparent; }
-        .lesson-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-        .time-text { opacity: 0.6; font-size: 12px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; flex-shrink: 0; }#loading-screen { font-size: 15px; font-weight: 600; color: #8e8e93; text-align: center; margin-top: 45vh; }
+
+        .empty-day {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-sub);
+            font-size: 15px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: var(--glass-bg);
+            padding: 4px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-sub);
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: #fff;
+        }
+    </style>
+</head>
+<body class="dark-theme">
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="app-container">
+        <header id="app-header">
+            <h1>Расписание Кирилла</h1>
+            <div id="live-status" class="status-badge">Загрузка статуса...</div>
+        </header>
+
+        <div class="controls-row">
+            <button class="btn" id="btn-theme">🌓 Тема: Авто</button>
+            <button class="btn" id="btn-bg">🎨 Сгенерировать фон</button>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="tab-btn" id="tab-auto" onclick="switchView('auto')">Авто-день</button>
+            <button class="tab-btn" id="tab-all" onclick="switchView('all')">Все дни</button>
+        </div>
+
+        <div id="schedule-container"></div>
+    </div>
+
+    <script>
+        const scheduleData = {
+            1: {
+                name: "Понедельник",
+                lessons: [
+                    { num: 1, time: "08:30 - 09:10", subject: "Физика", room: "301 каб." },
+                    { num: 2, time: "09:20 - 10:00", subject: "Литература", room: "308 каб." },
+                    { num: 3, time: "10:20 - 11:00", subject: "История", room: "210 каб." },
+                    { num: 4, time: "11:10 - 11:50", subject: "Алгебра", room: "313 каб." },
+                    { num: 5, time: "12:10 - 12:50", subject: "Вероятность", room: "313 каб." },
+                    { num: 6, time: "13:10 - 13:50", subject: "Физкультура", room: "2 этаж, спорт.зал" },
+                    { num: 7, time: "14:00 - 14:40", subject: "Информатика", room: "301 каб." }
+                ]
+            },
+            2: {
+                name: "Вторник",
+                lessons: [
+                    { num: 2, time: "09:20 - 10:00", subject: "География", room: "306 каб." },
+                    { num: 3, time: "10:20 - 11:00", subject: "Труд", room: "201 каб." },
+                    { num: 4, time: "11:10 - 11:50", subject: "История", room: "210 каб." },
+                    { num: 5, time: "12:10 - 12:50", subject: "Русский язык", room: "308 каб." },
+                    { num: 6, time: "13:10 - 13:50", subject: "Музыка", room: "303 каб." },
+                    { num: 7, time: "14:00 - 14:40", subject: "Алгебра", room: "313 каб." },
+                    { num: 8, time: "14:50 - 15:30", subject: "Геометрия", room: "313 каб." }
+                ]
+            },
+            3: {
+                name: "Среда",
+                lessons: [
+                    { num: 1, time: "08:30 - 09:10", subject: "ОБЗР", room: "203 каб." },
+                    { num: 2, time: "09:20 - 10:00", subject: "Биология", room: "306 каб." },
+                    { num: 3, time: "10:20 - 11:00", subject: "Физкультура", room: "2 этаж, спорт.зал" },
+                    { num: 4, time: "11:10 - 11:50", subject: "Англ.язык", room: "305 каб." },
+                    { num: 5, time: "12:10 - 12:50", subject: "Физика", room: "301 каб." },
+                    { num: 6, time: "13:10 - 13:50", subject: "География", room: "306 каб." }
+                ]
+            },
+            4: {
+                name: "Четверг",
+                lessons: [
+                    { num: 3, time: "10:20 - 11:00", subject: "Биология", room: "203 каб." },
+                    { num: 4, time: "11:10 - 11:50", subject: "Англ.язык", room: "305 каб." },
+                    { num: 5, time: "12:10 - 12:50", subject: "История", room: "210 каб." },
+                    { num: 6, time: "13:10 - 13:50", subject: "Русский язык", room: "308 каб." },
+                    { num: 7, time: "14:00 - 14:40", subject: "Химия", room: "316 каб." }
+                ]
+            },
+            5: {
+                name: "Пятница",
+                lessons: [
+                    { num: 3, time: "10:20 - 11:00", subject: "Химия", room: "316 каб." },
+                    { num: 4, time: "11:10 - 11:50", subject: "Алгебра", room: "313 каб." },
+                    { num: 5, time: "12:10 - 12:50", subject: "Русский язык", room: "308 каб." },
+                    { num: 6, time: "13:10 - 13:50", subject: "Англ.язык", room: "305 каб." },
+                    { num: 7, time: "14:00 - 14:40", subject: "Литература", room: "308 каб." },
+                    { num: 8, time: "14:50 - 15:30", subject: "Геометрия", room: "313 каб." }
+                ]
+            }
+        };
+
+        const intervals = [
+            { start: "08:30", end: "09:10", type: "lesson", num: 1 },
+            { start: "09:10", end: "09:20", type: "break", next: 2 },
+            { start: "09:20", end: "10:00", type: "lesson", num: 2 },
+            { start: "10:00", end: "10:20", type: "break", next: 3 },
+            { start: "10:20", end: "11:00", type: "lesson", num: 3 },
+            { start: "11:00", end: "11:10", type: "break", next: 4 },
+            { start: "11:10", end: "11:50", type: "lesson", num: 4 },
+            { start: "11:50", end: "12:10", type: "break", next: 5 },
+            { start: "12:10", end: "12:50", type: "lesson", num: 5 },
+            { start: "12:50", end: "13:10", type: "break", next: 6 },
+            { start: "13:10", end: "13:50", type: "lesson", num: 6 },
+            { start: "13:50", end: "14:00", type: "break", next: 7 },
+            { start: "14:00", end: "14:40", type: "lesson", num: 7 },
+            { start: "14:40", end: "14:50", type: "break", next: 8 },
+            { start: "14:50", end: "15:30", type: "lesson", num: 8 }
+        ];
+
+        let currentView = 'auto'; // 'auto' or 'all'
+        let themeMode = 'auto'; // 'auto', 'light', 'dark'
+
+        function timeToMin(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function getCurrentStatus() {
+            const now = new Date();
+            let day = now.getDay(); 
+            const currentMin = now.getHours() * 60 + now.getMinutes();
+
+            // For testing at night/weekends or when day is 0, 6 -> Weekend
+            let isWeekend = (day === 0 || day === 6);
+            
+            // Check if today's lessons are over
+            let todaySchedule = scheduleData[day];
+            let lastLessonEnd = 0;
+            if (todaySchedule && todaySchedule.lessons.length > 0) {
+                const lastTime = todaySchedule.lessons[todaySchedule.lessons.length - 1].time.split(' - ')[1];
+                lastLessonEnd = timeToMin(lastTime);
+            }
+
+            let displayDay = day;
+            let showTomorrow = false;
+
+            if (isWeekend || currentMin > lastLessonEnd || !todaySchedule) {
+                showTomorrow = true;
+                // find next school day
+                displayDay = day + 1;
+                if (displayDay > 5 || displayDay === 0) displayDay = 1; // Loop back to Monday
+            }
+
+            // Find current active lesson or break
+            let activeInterval = null;
+            if (!showTomorrow && todaySchedule) {
+                for (const inter of intervals) {
+                    const s = timeToMin(inter.start);
+                    const e = timeToMin(inter.end);
+                    if (currentMin >= s && currentMin < e) {
+                        activeInterval = { ...inter, remaining: e - currentMin };
+                        break;
+                    }
+                }
+            }
+
+            return {
+                dayToShow: displayDay,
+                isTomorrow: showTomorrow,
+                activeInterval: activeInterval
+            };
+        }
+
+        function generateGradient() {
+            const canvas = document.getElementById('bg-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const isDark = document.body.classList.contains('dark-theme');
+            
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            
+            // Modern premium fluid gradients using 3 color stops
+            const palettesDark = [
+                ['#0f172a', '#1e1b4b', '#2e1065'],
+                ['#020617', '#111827', '#311042'],
+                ['#070a13', '#0f172a', '#1e293b']
+            ];
+            
+            const palettesLight = [
+                ['#f8fafc', '#e2e8f0', '#cbd5e1'],
+                ['#f1f5f9', '#f8fafc', '#e2e8f0'],
+                ['#eff6ff', '#dbeafe', '#bfdbfe']
+            ];
+
+            const palette = isDark ? palettesDark[Math.floor(Math.random()*palettesDark.length)] : palettesLight[Math.floor(Math.random()*palettesLight.length)];
+            
+            let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            grad.addColorStop(0, palette[0]);
+            grad.addColorStop(0.5, palette[1]);
+            grad.addColorStop(1, palette[2]);
+            
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+        }
+
+        function switchView(view) {
+            currentView = view;
+            document.getElementById('tab-auto').classList.toggle('active', view === 'auto');
+            document.getElementById('tab-all').classList.toggle('active', view === 'all');
+            renderSchedule();
+        }
+
+        function renderSchedule() {
+            const status = getCurrentStatus();
+            const container = document.getElementById('schedule-container');
+            container.innerHTML = '';
+
+            // Update status badge
+            const statusBadge = document.getElementById('live-status');
+            if (status.activeInterval) {
+                if (status.activeInterval.type === 'lesson') {
+                    statusBadge.innerText = `Идёт ${status.activeInterval.num}-й урок. Осталось ${status.activeInterval.remaining} мин`;
+                } else {
+                    statusBadge.innerText = `Перемена перед ${status.activeInterval.next}-м уроком. Осталось ${status.activeInterval.remaining} мин`;
+                }
+            } else {
+                statusBadge.innerText = status.isTomorrow ? "Учебный день окончен (Показ завтра)" : "Уроки ещё не начались";
+            }
+
+            if (currentView === 'auto') {
+                renderSingleDay(status.dayToShow, status.isTomorrow ? "Завтра" : "Сегодня", container, status.activeInterval);
+            } else {
+                for (let d = 1; d <= 5; d++) {
+                    renderSingleDay(d, '', container, status.activeInterval, status.dayToShow === d && !status.isTomorrow);
+                }
+            }
+        }
+
+        function renderSingleDay(dayNum, customLabel, container, activeInterval, isTodayAllMode = false) {
+            const dayData = scheduleData[dayNum];
+            if (!dayData) return;
+
+            const dayBlock = document.createElement('div');
+            dayBlock.className = 'schedule-list';
+            dayBlock.style.marginBottom = '24px';
+
+            const title = document.createElement('div');
+            title.className = 'day-title';
+            title.innerHTML = `${dayData.name} ${customLabel ? `<span>${customLabel}</span>` : ''}`;
+            dayBlock.appendChild(title);
+
+            // Complete lesson list map with breaks inserted
+            let currentStatus = getCurrentStatus();
+            let checkDay = currentStatus.dayToShow;
+
+            dayData.lessons.forEach((lesson, index) => {
+                const card = document.createElement('div');
+                card.className = 'lesson-card';
+                
+                // Active highlighting logic
+                const isActiveLesson = activeInterval && activeInterval.type === 'lesson' && activeInterval.num === lesson.num && dayNum === currentStatus.dayToShow && !currentStatus.isTomorrow;
+                if (isActiveLesson) {
+                    card.classList.add('active');
+                }
+
+                let timerHtml = '';
+                if (isActiveLesson) {
+                    timerHtml = `<div class="lesson-timer"><span class="timer-val">${activeInterval.remaining}м</span><span class="timer-lbl">до конца</span></div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="lesson-info">
+                        <span class="lesson-num-time">${lesson.num} Урок • ${lesson.time}</span>
+                        <span class="lesson-name">${lesson.subject}</span>
+                        <span class="lesson-room">${lesson.room}</span>
+                    </div>
+                    ${timerHtml}
+                `;
+                dayBlock.appendChild(card);
+
+                // Add break card if not the last item
+                if (index < dayData.lessons.length - 1) {
+                    const nextLesson = dayData.lessons[index + 1];
+                    // Find break between this lesson and next
+                    const breakInter = intervals.find(i => i.type === 'break' && i.next === nextLesson.num);
+                    if (breakInter) {
+                        const breakCard = document.createElement('div');
+                        breakCard.className = 'break-card';
+                        const isActiveBreak = activeInterval && activeInterval.type === 'break' && activeInterval.next === nextLesson.num && dayNum === currentStatus.dayToShow && !currentStatus.isTomorrow;
+                        
+                        if (isActiveBreak) {
+                            breakCard.classList.add('active');
+                            breakCard.innerHTML = `<span>Перемена</span><span>Осталось ${activeInterval.remaining} мин</span>`;
+                        } else {
+                            breakCard.innerHTML = `<span>Перемена (${breakInter.start.split(':')[1] ? '10-20' : ''} мин)</span><span>${breakInter.start} - ${breakInter.end}</span>`;
+                        }
+                        dayBlock.appendChild(breakCard);
+                    }
+                }
+            });
+
+            container.appendChild(dayBlock);
+        }
+
+        // Automatic Light/Dark mode detection
+        function initTheme() {
+            const hour = new Date().getHours();
+            const isDark = hour < 7 || hour > 19;
+            document.body.className = isDark ? 'dark-theme' : 'light-theme';
+            generateGradient();
+        }
+
+        document.getElementById('btn-theme').addEventListener('click', () => {
+            if (document.body.classList.contains('dark-theme')) {
+                document.body.className = 'light-theme';
+                document.getElementById('btn-theme').innerText = '🌓 Тема: Светлая';
+            } else {
+                document.body.className = 'dark-theme';
+                document.getElementById('btn-theme').innerText = '🌓 Тема: Тёмная';
+            }
+            generateGradient();
+        });
+
+        document.getElementById('btn-bg').addEventListener('click', generateGradient);
+
+        // Parallax effect via phone rotation or touch interaction simulation for maximum compatibility
+        window.addEventListener('mousemove', (e) => {
+            const header = document.getElementById('app-header');
+            const x = (window.innerWidth / 2 - e.clientX) / 30;
+            const y = (window.innerHeight / 2 - e.clientY) / 30;
+            header.style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
+        });
+
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', (e) => {
+                const header = document.getElementById('app-header');
+                const tiltX = Math.clip ? Math.clip(e.gamma, -20, 20) : e.gamma / 2;
+                const tiltY = Math.clip ? Math.clip(e.beta, -20, 20) : e.beta / 2;
+                if(tiltX && tiltY) {
+                    header.style.transform = `rotateY(${tiltX}deg) rotateX(${-tiltY}deg)`;
+                }
+            });
+        }
+
+        // Run application
+        initTheme();
+        renderSchedule();
+        setInterval(renderSchedule, 30000); // refresh every 30 seconds
+        window.addEventListener('resize', generateGradient);
+    </script>
+</body>
+</html>
