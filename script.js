@@ -1,5 +1,4 @@
 let currentUser = 0;
-// 🌈 ОГРОМНАЯ КИБЕРПАНК-МАТРИЦА ФОНОВ (9 уникальных палитр, которые больше не наскучат)
 const darkPalettes = [
     { base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
     { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
@@ -57,9 +56,8 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const pool = isDark ? darkPalettes : lightPalettes;
-    activePalette = pool[Math.floor(Math.random() * pool.length)]; // Берем случайную схему из расширенной матрицы
-    
-    const soloColor = activePalette.colors[0]; // ГАРАНТИРОВАННЫЙ ФИКС ЦВЕТА КНОПОК ДЕНЬ/НЕДЕЛЯ
+    activePalette = pool[Math.floor(Math.random() * pool.length)];
+    const soloColor = activePalette.colors;
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -103,9 +101,19 @@ function renderLoop() {
 }
 
 function updateMousePos(e) {
-    const rect = canvas.getBoundingClientRect(); const clientX = e.touches.length ? e.touches[0].clientX : e.clientX; const clientY = e.touches.length ? e.touches[0].clientY : e.clientY;
+    const rect = canvas.getBoundingClientRect(); const clientX = e.touches.length ? e.touches.clientX : e.clientX; const clientY = e.touches.length ? e.touches.clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
+
+// 🛠️ ИСПРАВЛЕНО: Полное восстановление 3D параллакса гироскопа телефона
+window.addEventListener('deviceorientation', e => {
+    if (!e.gamma || !e.beta) return;
+    let rotateY = Math.min(Math.max(e.gamma / 1.5, -15), 15);
+    let rotateX = Math.min(Math.max((e.beta - 50) / 1.5, -15), 15);
+    document.querySelectorAll('.timer-card, .day-schedule-box, .week-matrix-box').forEach(card => {
+        card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+    });
+});
 
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
@@ -211,7 +219,6 @@ function updateLogic() {
     const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
     
     let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!", lessonProgressPercent = 0, currentBreakTimePassed = 0, currentBreakTotal = 1;
-    const tCard = document.getElementById('main-timer-card'); tCard.className = "timer-card gyro-tilt";
     
     if (isDisplayingToday && currentData[day]) {
         const todayLessons = currentData[day].lessons, firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number)), firstLessonStart = parseTime(timeTable.find(t=>t.num===firstLessonNum).start);
@@ -244,7 +251,7 @@ function updateLogic() {
                         else { let diff = nextStart - currentMinutes; timeDiffText = `${diff} мин.`; }
                         subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
                         currentBreakTotal = nextStart - currEnd; currentBreakTimePassed = currentMinutes - currEnd;
-                        if ((nextStart - currentMinutes) <= 2) tCard.classList.add('break-warning'); else tCard.classList.add('break-active'); break;
+                        break;
                     }
                 }
             }
