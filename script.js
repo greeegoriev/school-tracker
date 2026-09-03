@@ -85,7 +85,7 @@ function renderLoop() {
 }
 
 function updateMousePos(e) {
-    const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches.clientX : e.clientX; const clientY = e.touches ? e.touches.clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 window.addEventListener('touchstart', e => { 
@@ -138,8 +138,7 @@ window.addEventListener('click', e => {
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
     let nameLink = e.target.closest('.switch-name-link');
     if (nameLink) {
-        currentUser = currentUser === 0 ? 1 : 0;
-        nameLink.innerText = currentUser === 0 ? "Кирилла" : "Жени";
+        currentUser = currentUser === 0 ? 1 : 0; nameLink.innerText = currentUser === 0 ? "Кирилла" : "Жени";
         buildMatrix(); updateLogic(); return;
     }
     if (e.target.closest('.week-matrix-box')) {
@@ -228,20 +227,29 @@ function updateLogic() {
     } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий день: ${activeDayInfo.name}`; }
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
     
-    for (let slot = 0; slot <= 8; slot++) {
-        const name = activeDayInfo.lessons[slot]; if (!name) continue;
+    const activeLessonsKeys = Object.keys(activeDayInfo.lessons).map(Number).sort((a,b)=>a-b);
+    for (let idx = 0; idx < activeLessonsKeys.length; idx++) {
+        const slot = activeLessonsKeys[idx]; const name = activeDayInfo.lessons[slot];
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
         
-        let progressHTML = '', roomHTML = '';
+        let progressHTML = '', roomHTML = '', breakBadgeHTML = '';
         if (activeLessonId === slot) {
-            let widthPercent = (lessonProgressPercent * 100).toFixed(1);
-            progressHTML = `<div class="lesson-progress-fill" style="width: ${widthPercent}%"></div>`;
+            progressHTML = `<div class="lesson-progress-fill" style="width: ${(lessonProgressPercent * 100).toFixed(1)}%"></div>`;
         }
         if (activeDayInfo.rooms && activeDayInfo.rooms[slot]) {
             roomHTML = `<div>каб. ${activeDayInfo.rooms[slot]}</div>`;
         }
-        row.innerHTML = `${progressHTML}<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta">${roomHTML}<div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
+        // 📊 РАСЧЕТ И ВЫВОД НЕОНОВЫХ БЕЙДЖЕЙ ДЛЯ КАЖДОЙ ПЕРЕМЕНЫ
+        if (idx < activeLessonsKeys.length - 1) {
+            const nextSlot = activeLessonsKeys[idx + 1]; const nextSlotTime = timeTable.find(t => t.num === nextSlot);
+            if (currentSlotTime && nextSlotTime) {
+                let breakDuration = parseTime(nextSlotTime.start) - parseTime(currentSlotTime.end);
+                if (breakDuration > 0) breakBadgeHTML = `<span class="break-badge">⏱️ ${breakDuration} мин</span>`;
+            }
+        }
+        
+        row.innerHTML = `${progressHTML}<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div class="lesson-time-row"><span>${currentSlotTime ? currentSlotTime.start : "--:--"}</span>${breakBadgeHTML}</div>${roomHTML}</div>`;
         listContainer.appendChild(row);
     }
 }
