@@ -1,3 +1,6 @@
+const darkPalettes = [{ base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
+const lightPalettes = [{ base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] }, { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] }, { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }];
+
 const timeTable = [
     { num: 1, start: "08:30", end: "09:10" }, { num: 2, start: "09:20", end: "10:00" },
     { num: 3, start: "10:20", end: "11:00" }, { num: 4, start: "11:10", end: "11:50" },
@@ -17,25 +20,21 @@ const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getConte
 const swiper = document.getElementById('swiper'); const pullIndicator = document.getElementById('pull-indicator'); const pullSvg = document.getElementById('pull-svg');
 let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0, dragDirection = null, lastHeartbeat = Date.now(), activePalette = null;
 
-let blobs = [];
-let mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
+let blobs = []; let mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
 let matrixScale = 1, startHypot = 0, isZuming = false, lastTapTime = 0;
 let panX = 0, panY = 0, startPanX = 0, startPanY = 0, isPanning = false;
 
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
-
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
-
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    const soloColor = activePalette.colors;
+    const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
 }
-const darkPalettes = [{ base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
-const lightPalettes = [{ base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] }, { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] }, { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }];
+
 function initBlobs() {
     blobs = [];
     for (let i = 0; i < 5; i++) {
@@ -76,8 +75,8 @@ function renderLoop() {
 
 function updateMousePos(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches.clientX : e.clientX; 
-    const clientY = e.touches ? e.touches.clientY : e.clientY;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 window.addEventListener('touchstart', e => { 
@@ -203,9 +202,7 @@ function updateLogic() {
                 for (let i = 0; i < lessonsKeys.length - 1; i++) {
                     let currEnd = parseTime(timeTable[lessonsKeys[i] - 1].end), nextStart = parseTime(timeTable[lessonsKeys[i+1] - 1].start);
                     if (currentMinutes > currEnd && currentMinutes < nextStart) {
-                        let diff = nextStart - currentMinutes; 
-                        // ИСПРАВЛЕНО: Текст изменен на "До конца перемены" согласно задаче
-                        currentStatusText = "До конца перемены"; timeDiffText = `${diff} мин.`; subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
+                        let diff = nextStart - currentMinutes; currentStatusText = "До конца перемены"; timeDiffText = `${diff} мин.`; subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
                         if (diff <= 2) tCard.classList.add('break-warning'); else tCard.classList.add('break-active'); break;
                     }
                 }
