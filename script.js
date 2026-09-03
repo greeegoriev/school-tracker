@@ -62,9 +62,10 @@ function generateFluidBackground() {
         { base: '#0d0202', colors: ['#ff3300', '#ff0055', '#ffcc00', '#3b0066'] }
     ];
     const lightPalettes = [
-        { base: '#ffffff', colors: ['#ff007f', '#ffaa00', '#00f2fe', '#4facfe'] },
-        { base: '#f4f7ff', colors: ['#fbc2eb', '#a6c1ee', '#fad0c4', '#ff9a9e'] },
-        { base: '#fdfbf7', colors: ['#11998e', '#38ef7d', '#ffefba', '#ffffff'] }
+    { base: '#fff5f7', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] }, // 1. Кислотный Закат: Фламинго, Сочный Апельсин, Бирюза
+    { base: '#f0f4ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] }, // 2. Электрик-Поп: Синий неон, Яркий Циан, Розовый фуксия
+    { base: '#f7fff5', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }, // 3. Кислотный Лайм: Ядовитый зеленый, Лимонный неон, Морской волны
+    { base: '#fffdf0', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }  // 4. Тропический Кибер: Огненный оранжевый, Маджента, Желтый неон
     ];
     const list = isDark ? darkPalettes : lightPalettes; const selected = list[Math.floor(Math.random() * list.length)];
     ctx.fillStyle = selected.base; ctx.fillRect(0, 0, canvas.width, canvas.height);
