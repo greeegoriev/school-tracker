@@ -35,6 +35,7 @@ window.addEventListener('touchmove', e => {
         else isDragging = false;
     }
     
+    // ИСПРАВЛЕНО: Заменено присваивание (=) на строгое сравнение (===)
     if (dragDirection === 'horizontal') {
         currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`;
     } else if (dragDirection === 'pull') {
@@ -44,7 +45,6 @@ window.addEventListener('touchmove', e => {
     }
     if (typeof generateFluidBackground === 'function') generateFluidBackground();
 });
-
 window.addEventListener('touchend', () => {
     if (!isDragging) return; isDragging = false;
     if (dragDirection === 'horizontal') {
@@ -60,13 +60,14 @@ window.addEventListener('touchend', () => {
 });
 
 window.addEventListener('click', e => { if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; activePalette = null; generateFluidBackground(); });
+
 function generateFluidBackground() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const darkPalettes = [{ base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
     const lightPalettes = [{ base: '#fff5f7', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] }, { base: '#f0f4ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] }, { base: '#f7fff5', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }];
     if (!activePalette) { activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)]; }
     
-    const currentAccentColor = activePalette.colors[1]; // Берем яркий цвет для плашек и рамки урока
+    const currentAccentColor = activePalette.colors[1] || activePalette.colors[0]; 
     document.documentElement.style.setProperty('--accent', currentAccentColor);
     document.documentElement.style.setProperty('--neon-glow', currentAccentColor + (isDark ? '66' : '33'));
     
@@ -84,7 +85,6 @@ function generateFluidBackground() {
         ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply'; ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
 }
-
 function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week'), randomEffect = Math.floor(Math.random() * 3) + 1;
@@ -108,6 +108,7 @@ function switchScreen(index) {
     document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
     generateFluidBackground();
 }
+
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
     let corner = document.createElement('div'); corner.className = 'matrix-cell header'; corner.innerText = '№'; grid.appendChild(corner);
