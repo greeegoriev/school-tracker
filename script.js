@@ -17,7 +17,6 @@ const lightPalettes = [
     { base: '#ffffff', colors: ['#11998e', '#38ef7d', '#00ffcc', '#0072ff'] },
     { base: '#ffffff', colors: ['#7f00ff', '#ff007f', '#ff0055', '#9900ff'] }
 ];
-
 const timeTable = [
     { num: 0, start: "08:00", end: "08:25" },
     { num: 1, start: "08:30", end: "09:10" }, { num: 2, start: "09:20", end: "10:00" },
@@ -25,7 +24,6 @@ const timeTable = [
     { num: 5, start: "12:10", end: "12:50" }, { num: 6, start: "13:10", end: "13:50" },
     { num: 7, start: "14:00", end: "14:40" }, { num: 8, start: "14:50", end: "15:30" }
 ];
-
 const schedules = [
     {
         1: { name: "Понедельник", short: "Пн", lessons: { 0: "Разговоры о важном", 1: "Физика", 2: "Литература", 3: "История", 4: "Алгебра", 5: "Вероятность", 6: "Физкультура", 7: "Информатика" }, rooms: {0:"301", 1:"301", 2:"308", 3:"210", 4:"313", 5:"313", 6:"Спортзал", 7:"301"} },
@@ -50,7 +48,7 @@ let blobs = []; let mouse = { x: null, y: null, targetX: null, targetY: null, ac
 let matrixScale = 1, startHypot = 0, isZuming = false, lastTapTime = 0;
 let panX = 0, panY = 0, startPanX = 0, startPanY = 0, isPanning = false;
 
-let restRotateX = 0, restRotateY = 0, restIsDragging = false, restStartX = 0, restStartY = 0;
+let gyroX = 0, gyroY = 0, restRotateX = 0, restRotateY = 0, restIsDragging = false, restStartX = 0, restStartY = 0;
 
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
@@ -59,7 +57,7 @@ function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const pool = isDark ? darkPalettes : lightPalettes;
     activePalette = pool[Math.floor(Math.random() * pool.length)];
-    const soloColor = activePalette.colors[0]; // ИСПРАВЛЕНО: Строго изолированный первый цвет
+    const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -83,10 +81,6 @@ function renderLoop() {
     ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
     
-    if (mouse.active && mouse.targetX !== null) {
-        if (mouse.x === null) { mouse.x = mouse.targetX; mouse.y = mouse.targetY; }
-        mouse.x += (mouse.targetX - mouse.x) * 0.08; mouse.y += (mouse.targetY - mouse.y) * 0.08;
-    }
     blobs.forEach((blob) => {
         blob.x += blob.vx; blob.y += blob.vy;
         if (blob.x < -100 || blob.x > canvas.width + 100) blob.vx *= -1;
@@ -99,32 +93,34 @@ function renderLoop() {
 }
 
 function updateMousePos(e) {
-    const rect = canvas.getBoundingClientRect(); const clientX = e.touches.length ? e.touches.clientX : e.clientX; const clientY = e.touches.length ? e.touches.clientY : e.clientY;
+    const rect = canvas.getBoundingClientRect(); const clientX = e.touches.length ? e.touches[0].clientX : e.clientX; const clientY = e.touches.length ? e.touches[0].clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
-// 🛠️ ИСПРАВЛЕНО: Полное восстановление гироскопа и запуск ПРОТИВОФАЗНОГО параллакса для «Отдыха»
 window.addEventListener('deviceorientation', e => {
     if (!e.gamma || !e.beta) return;
-    let rotateY = Math.min(Math.max(e.gamma / 1.5, -15), 15);
-    let rotateX = Math.min(Math.max((e.beta - 50) / 1.5, -15), 15);
+    gyroY = Math.min(Math.max(e.gamma / 1.5, -15), 15);
+    gyroX = Math.min(Math.max((e.beta - 50) / 1.5, -15), 15);
     
     document.querySelectorAll('.timer-card, .day-schedule-box, .week-matrix-box').forEach(card => {
-        card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+        card.style.transform = `rotateX(${gyroX}deg) rotateY(${gyroY}deg) translateZ(10px)`;
     });
     
-    // Противофаза (инверсия углов наклона) для интерактивной плашки «Отдых»
     const restBox = document.querySelector('.cyber-rest-box');
     if (restBox && !restIsDragging) {
-        restBox.style.transform = `rotateX(${-rotateX * 1.3}deg) rotateY(${-rotateY * 1.3}deg) rotateZ(-2deg)`;
+        restBox.style.transform = `rotateX(${-gyroX * 1.4}deg) rotateY(${-gyroY * 1.4}deg) rotateZ(-2deg)`;
     }
 });
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
     
-    // Считывание пальца для вращения плашки Отдыха
     let restTarget = e.target.closest('.cyber-rest-box');
-    if (restTarget) { restIsDragging = true; restStartX = e.touches[0].clientX; restStartY = e.touches[0].clientY; return; }
+    if (restTarget) { 
+        restIsDragging = true; 
+        const t = e.touches[0]; restStartX = t.clientX; restStartY = t.clientY; 
+        const rb = document.querySelector('.cyber-rest-box'); if(rb) rb.style.transition = 'none';
+        return; 
+    }
 
     if (e.touches.length === 2 && currentIdx === 1 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
@@ -146,11 +142,11 @@ window.addEventListener('touchstart', e => {
 
 window.addEventListener('touchmove', e => {
     if (restIsDragging) {
-        let dx = e.touches[0].clientX - restStartX; let dy = e.touches[0].clientY - restStartY;
-        restRotateY += dx * 0.4; restRotateX -= dy * 0.4;
+        const t = e.touches[0]; let dx = t.clientX - restStartX; let dy = t.clientY - restStartY;
+        restRotateY = Math.min(Math.max(restRotateY + dx * 0.4, -45), 40); restRotateX = Math.min(Math.max(restRotateX - dy * 0.4, -40), 40);
         let restBox = document.querySelector('.cyber-rest-box');
-        if (restBox) restBox.style.transform = `rotateX(${restRotateX}deg) rotateY(${restRotateY}deg) scale(1.05)`;
-        restStartX = e.touches[0].clientX; restStartY = e.touches[0].clientY; return;
+        if (restBox) restBox.style.transform = `rotateX(${restRotateX}deg) rotateY(${restRotateY}deg) scale(1.05) rotateZ(-2deg)`;
+        restStartX = t.clientX; restStartY = t.clientY; return;
     }
     if (isZuming && e.touches.length === 2 && currentIdx === 1) {
         e.preventDefault();
@@ -173,12 +169,11 @@ window.addEventListener('touchmove', e => {
 }, { passive: false });
 
 window.addEventListener('touchend', () => {
-    if (restIsDragging) { restIsDragging = false; const rb = document.querySelector('.cyber-rest-box'); if (rb) { rb.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'; rb.style.transform = 'rotateX(0deg) rotateY(0deg) rotateZ(-2deg)'; setTimeout(() => { if (rb) rb.style.transition = ''; }, 600); } }
+    if (restIsDragging) { restIsDragging = false; const rb = document.querySelector('.cyber-rest-box'); if (rb) { rb.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'; rb.style.transform = `rotateX(${-gyroX * 1.4}deg) rotateY(${-gyroY * 1.4}deg) rotateZ(-2deg)`; } }
     isDragging = false; isZuming = false; isPanning = false; mouse.active = false;
     if (dragDirection === 'horizontal') { let movedBy = currentTranslate - prevTranslate; if (movedBy < -80 && currentIdx < 1) currentIdx++; if (movedBy > 80 && currentIdx > 0) currentIdx--; switchScreen(currentIdx); }
     else if (dragDirection === 'pull') { let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g,'')) || 0; pullIndicator.style.transition = 'all 0.3s ease'; if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); } else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; } }
 });
-
 function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week');
@@ -204,13 +199,11 @@ function buildMatrix() {
         }
     }
 }
+
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list') || e.target.closest('.cyber-rest-box')) return; 
     let nameLink = e.target.closest('.switch-name-link');
-    if (nameLink) {
-        currentUser = currentUser === 0 ? 1 : 0; nameLink.innerText = currentUser === 0 ? "Кирилла" : "Жени";
-        buildMatrix(); updateLogic(); return;
-    }
+    if (nameLink) { currentUser = currentUser === 0 ? 1 : 0; nameLink.innerText = currentUser === 0 ? "Кирилла" : "Жени"; buildMatrix(); updateLogic(); return; }
     if (e.target.closest('.week-matrix-box')) {
         let currentTime = Date.now(); let tapLength = currentTime - lastTapTime;
         if (tapLength < 300 && tapLength > 0) { matrixScale = 1; panX = 0; panY = 0; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; grid.style.transform = 'translate3d(0, 0, 0) scale(1)'; e.preventDefault(); return; }
@@ -222,13 +215,12 @@ window.addEventListener('click', e => {
 function updateLogic() {
     const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes(), currentSecs = now.getSeconds();
     if (Date.now() - lastHeartbeat > 120000) document.getElementById('outdated-badge').classList.add('show'); lastHeartbeat = Date.now();
-    let currentData = schedules[currentUser];
-    let isWeekend = (day === 0 || day === 6), targetDay = day;
+    let currentData = schedules[currentUser], isWeekend = (day === 0 || day === 6), targetDay = day;
     if (!isWeekend && currentData[day]) {
         const lastLessonNum = Math.max(...Object.keys(currentData[day].lessons).map(Number));
         if (currentMinutes > parseTime(timeTable.find(t=>t.num===lastLessonNum).end)) { targetDay = day + 1; if (targetDay > 5) targetDay = 1; }
     } else if (isWeekend) { targetDay = 1; }
-    const isDisplayingToday = (targetDay === day); const activeDayInfo = currentData[targetDay];
+    const isDisplayingToday = (targetDay === day), activeDayInfo = currentData[targetDay];
     document.getElementById('day-title').innerText = isDisplayingToday ? `Сегодня (${activeDayInfo.name})` : `Расписание на завтра (${activeDayInfo.name})`;
     const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
     
@@ -248,8 +240,7 @@ function updateLogic() {
                 if (currentMinutes >= startM && currentMinutes <= endM) {
                     activeLessonId = lNum; currentStatusText = `Идет ${lNum === 0 ? '0-й' : lNum + '-й'} урок`;
                     let totalSecsDiff = (endM * 60) - (currentMinutes * 60 + currentSecs);
-                    if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
-                    else { timeDiffText = `${endM - currentMinutes} мин.`; }
+                    timeDiffText = totalSecsDiff < 60 ? `${totalSecsDiff} сек` : `${endM - currentMinutes} мин.`;
                     subText = `До конца урока: ${todayLessons[lNum]}`;
                     lessonProgressPercent = (currentMinutes * 60 + currentSecs - startM * 60) / (endM * 60 - startM * 60); break;
                 }
@@ -261,11 +252,9 @@ function updateLogic() {
                     if (currentMinutes > currEnd && currentMinutes < nextStart) {
                         let totalSecsDiff = (nextStart * 60) - (currentMinutes * 60 + currentSecs);
                         currentStatusText = "До конца перемены";
-                        if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
-                        else { let diff = nextStart - currentMinutes; timeDiffText = `${diff} мин.`; }
+                        timeDiffText = totalSecsDiff < 60 ? `${totalSecsDiff} сек` : `${nextStart - currentMinutes} мин.`;
                         subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
-                        currentBreakTotal = nextStart - currEnd; currentBreakTimePassed = currentMinutes - currEnd;
-                        break;
+                        currentBreakTotal = nextStart - currEnd; currentBreakTimePassed = currentMinutes - currEnd; break;
                     }
                 }
             }
@@ -302,6 +291,4 @@ function updateLogic() {
         listContainer.appendChild(row);
     }
 }
-
-function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
-buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 1000); window.addEventListener('resize', resizeCanvas); renderLoop();
+buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 1000); window.addEventListener('resize', () => { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }); renderLoop();
