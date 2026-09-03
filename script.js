@@ -21,27 +21,18 @@ let blobs = [];
 let mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
 
 let matrixScale = 1, startHypot = 0, isZuming = false;
+let lastTapTime = 0; // Переменная детектора двойного тапа
 
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 
-const darkPalettes = [
-    { base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
-    { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
-    { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }
-];
-const lightPalettes = [
-    { base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] },
-    { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] },
-    { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }
-];
+const darkPalettes = [{ base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
+const lightPalettes = [{ base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] }, { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] }, { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }];
 
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    
-    // ИСПРАВЛЕНО: Берем строго первый строковый цвет [0] для правильной покраски плашек CSS
     const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
@@ -69,19 +60,15 @@ function renderLoop() {
         if (mouse.x === null) { mouse.x = mouse.targetX; mouse.y = mouse.targetY; }
         mouse.x += (mouse.targetX - mouse.x) * 0.08; mouse.y += (mouse.targetY - mouse.y) * 0.08;
     }
-
     blobs.forEach((blob) => {
         blob.x += blob.vx; blob.y += blob.vy;
         if (blob.x < -100 || blob.x > canvas.width + 100) blob.vx *= -1;
         if (blob.y < -100 || blob.y > canvas.height + 100) blob.vy *= -1;
-        
         if (mouse.active && mouse.x !== null) {
             let dx = mouse.x - blob.x; let dy = mouse.y - blob.y; let dist = Math.sqrt(dx*dx + dy*dy);
             if (dist < canvas.width * 0.6) { blob.x += (dx / dist) * 0.8; blob.y += (dy / dist) * 0.8; }
         }
-        
-        ctx.save();
-        let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
+        ctx.save(); let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
         radialGrad.addColorStop(0, blob.color + (isDark ? '99' : 'bb')); radialGrad.addColorStop(0.3, blob.color + '22'); radialGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
@@ -99,9 +86,10 @@ function updateMousePos(e) {
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
     
-    // ИСПРАВЛЕНО: Точные индексы [0] и [1] для активации ручного Pinch-Zoom на второй вкладке
     if (e.touches.length === 2 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isDragging = false; mouse.active = false;
+        // Отключаем transition стилей во время ручного разведения пальцев, чтобы зум не лагал
+        document.getElementById('matrix-grid').style.transition = 'none';
         startHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         return;
     }
@@ -111,7 +99,6 @@ window.addEventListener('touchstart', e => {
 });
 
 window.addEventListener('touchmove', e => {
-    // ИСПРАВЛЕНО: Масштабирование матрицы недели вычислениями расстояния между двумя пальцами
     if (isZuming && e.touches.length === 2) {
         e.preventDefault();
         let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
@@ -121,7 +108,6 @@ window.addEventListener('touchmove', e => {
         startHypot = currentHypot;
         return;
     }
-
     if (!isDragging || e.touches.length > 1) return;
     const touch = e.touches[0]; let diffX = touch.clientX - startX; let diffY = touch.clientY - startY;
     if (mouse.active) updateMousePos(e);
@@ -139,7 +125,7 @@ window.addEventListener('touchmove', e => {
         pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
     }
 }, { passive: false });
-window.addEventListener('touchend', () => {
+window.addEventListener('touchend', e => {
     isDragging = false; isZuming = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
     if (dragDirection === 'horizontal') {
         let movedBy = currentTranslate - prevTranslate;
@@ -152,8 +138,25 @@ window.addEventListener('touchend', () => {
     }
 });
 
+// УЛЬТРАЭЛЕГАНТНЫЙ ИНТЕРФЕЙСНЫЙ ДЕТЕКТОР ДВОЙНОГО ТАПА (RESET ZOOM)
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
+    
+    // Если Кирилл дважды быстро кликнул внутри сетки недели — плавно возвращаем масштаб 100%
+    if (e.target.closest('.week-matrix-box')) {
+        let currentTime = Date.now();
+        let tapLength = currentTime - lastTapTime;
+        if (tapLength < 300 && tapLength > 0) {
+            matrixScale = 1;
+            const grid = document.getElementById('matrix-grid');
+            grid.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; // Пружинящая интерполяция возврата
+            grid.style.transform = 'scale(1)';
+            e.preventDefault();
+            return;
+        }
+        lastTapTime = currentTime;
+    }
+    
     activePalette = null; selectRandomPalette(); 
 });
 
@@ -161,7 +164,6 @@ function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week'), randomEffect = Math.floor(Math.random() * 3) + 1;
     sDay.style.transition = sWeek.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'; swiper.style.transform = 'none';
-
     if (randomEffect === 1) {
         if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) rotateY(0deg)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(100%,0,-300px) rotateY(90deg)'; sWeek.style.opacity = '0'; }
         else { sDay.style.transform = 'translate3d(-100%,0,-300px) rotateY(-90deg)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0) rotateY(0deg)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
