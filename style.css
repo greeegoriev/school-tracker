@@ -10,7 +10,10 @@ body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Unbounde
 .outdated-badge.show { transform: translateY(0); opacity: 1; }
 .outdated-badge span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #ff453a; }
 .swiper-container { position: relative; width: 100%; height: 100%; z-index: 2; display: flex; transform-style: preserve-3d; will-change: transform; }
-.slide { min-width: 100%; width: 100%; height: 100%; display: flex; flex-direction: column; padding: 24px 20px calc(90px + env(safe-area-inset-bottom)); padding-top: calc(20px + env(safe-area-inset-top)); transform-style: preserve-3d; backface-visibility: hidden; will-change: transform, opacity, filter; touch-action: none !important; }
+
+/* 🛠️ ФИКС: Убираем none !important, возвращая свайпы и нативную прокрутку */
+.slide { min-width: 100%; width: 100%; height: 100%; display: flex; flex-direction: column; padding: 24px 20px calc(90px + env(safe-area-inset-bottom)); padding-top: calc(20px + env(safe-area-inset-top)); transform-style: preserve-3d; backface-visibility: hidden; will-change: transform, opacity, filter; }
+
 .header-widget { text-align: center; margin-top: 10px; will-change: transform; transition: transform 0.1s ease-out; }
 .header-widget h1 { font-size: 22px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; color: var(--text-main); }
 .switch-name-link { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; text-shadow: 0 0 10px var(--neon-glow); transition: opacity 0.2s ease; }
@@ -24,10 +27,17 @@ body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Unbounde
 .timer-sub { font-size: 13px; color: var(--text-sub); font-weight: 500; }
 .day-schedule-box { padding: 20px 16px; flex-grow: 1; max-height: 46vh; display: flex; flex-direction: column; justify-content: center; }
 .day-title { font-size: 15px; font-weight: 800; margin-bottom: 14px; text-align: center; }
-.lessons-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto !important; -webkit-overflow-scrolling: touch; touch-action: pan-y !important; }
+
+/* 🛠️ ФИКС: Гарантируем корректное поведение скролла уроков */
+.lessons-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+
 .lesson-row { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 18px !important; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden !important; }
 .lesson-row.active { background: rgba(5, 5, 8, 0.25) !important; border: 1px solid rgba(255, 255, 255, 0.05) !important; border-radius: 18px !important; box-shadow: 0 10px 30px var(--shadow), inset 0 0 15px var(--neon-glow) !important; overflow: hidden !important; }
-.lesson-progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 0; pointer-events: none; background: linear-gradient(90deg, #ff0055, #9900ff, #00ffcc) !important; opacity: 0.65; transition: width 1s linear; border-radius: 18px !important; }
+
+/* 🛠️ 🌟 ИСПРАВЛЕНО: Та самая изначальная взрывная ультра-неоновая градиентная схема для прогресс-бара */
+.lesson-progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 0; pointer-events: none; background: linear-gradient(90deg, #ff0055 0%, #00ffcc 50%, #9900ff 100%) !important; background-size: 200% 100% !important; animation: slowNeonFlow 8s linear infinite !important; opacity: 0.75 !important; transition: width 1s linear; border-radius: 18px !important; }
+@keyframes slowNeonFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
 .lesson-left, .lesson-meta { position: relative; z-index: 2; display: flex; flex-direction: column; }
 .lesson-left { align-items: flex-start; gap: 2px; }
 .lesson-meta { align-items: flex-end; justify-content: center; font-size: 14px; font-weight: 700; }
@@ -42,7 +52,7 @@ body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Unbounde
 .break-radial-bg { fill: rgba(255, 255, 255, 0.04); stroke: rgba(255, 255, 255, 0.08); stroke-width: 2.5; }
 .break-radial-track { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
 .break-radial-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 900; color: #ffffff; position: relative; z-index: 2; transform: translateZ(5px); text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
-.week-matrix-box { padding: 10px; height: 74vh; display: flex; flex-direction: column; margin-top: 15px; overflow: hidden; position: relative; touch-action: none !important; }
+.week-matrix-box { padding: 10px; height: 74vh; display: flex; flex-direction: column; margin-top: 15px; overflow: hidden; position: relative; }
 .matrix-grid { display: grid; grid-template-columns: 24px repeat(5, 1fr); grid-template-rows: auto repeat(9, 1fr); gap: 4px; min-height: 540px; min-width: 320px; width: 100%; transform-origin: 0 0; will-change: transform; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .matrix-cell { display: flex; align-items: center; justify-content: center; text-align: center; font-size: 8px; font-weight: 700; border-radius: 8px; padding: 2px 1px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.04); line-height: 1.1; word-wrap: break-word; word-break: break-word; overflow: hidden; }
 .matrix-cell.header, .matrix-cell.num-col { background: transparent; border: none; font-weight: 900; color: var(--text-sub); font-size: 11px; }
