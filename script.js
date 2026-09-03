@@ -1,24 +1,22 @@
 let currentUser = 0;
-
-// 🎨 ИСПРАВЛЕНО: Матрица увеличена до 15 премиальных киберпанк-сочетаний
+// 🌈 ОГРОМНАЯ КИБЕРПАНК-МАТРИЦА ФОНОВ (9 уникальных палитр, которые больше не наскучат)
 const darkPalettes = [
     { base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
     { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
     { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] },
-    { base: '#050205', colors: ['#ff00ea', '#ff0055', '#7000ff', '#330033'] },
-    { base: '#020508', colors: ['#00f2fe', '#4facfe', '#0000ff', '#003344'] },
-    { base: '#090401', colors: ['#ffaa00', '#ff3300', '#ff0055', '#4a0000'] },
-    { base: '#03010a', colors: ['#7928ca', '#ff0080', '#00dfd8', '#ff0055'] },
-    { base: '#010606', colors: ['#00ffcc', '#00ffff', '#0055ff', '#9900ff'] }
+    { base: '#090202', colors: ['#ff3300', '#ff0055', '#ffcc00', '#9900ff'] },
+    { base: '#020709', colors: ['#00f2fe', '#4facfe', '#0000ff', '#00ffcc'] },
+    { base: '#06010a', colors: ['#b92b27', '#1565c0', '#7000ff', '#ff007f'] },
+    { base: '#030303', colors: ['#ea00d9', '#711c91', '#0abdc6', '#091833'] },
+    { base: '#05020c', colors: ['#fe5f75', '#fc9842', '#ff0055', '#7a00ff'] },
+    { base: '#010604', colors: ['#00ffcc', '#38ef7d', '#11998e', '#00f6ff'] }
 ];
 const lightPalettes = [
     { base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] },
     { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] },
     { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] },
-    { base: '#f8fafc', colors: ['#4f46e5', '#06b6d4', '#10b981', '#3b82f6'] },
-    { base: '#fff5f5', colors: ['#f43f5e', '#ec4899', '#d946ef', '#8b5cf6'] },
-    { base: '#f0fdf4', colors: ['#22c55e', '#14b8a6', '#06b6d4', '#0ea5e9'] },
-    { base: '#fffbeb', colors: ['#eab308', '#f97316', '#ef4444', '#f43f5e'] }
+    { base: '#ffffff', colors: ['#11998e', '#38ef7d', '#00ffcc', '#0072ff'] },
+    { base: '#ffffff', colors: ['#7f00ff', '#ff007f', '#ff0055', '#9900ff'] }
 ];
 
 const timeTable = [
@@ -28,6 +26,7 @@ const timeTable = [
     { num: 5, start: "12:10", end: "12:50" }, { num: 6, start: "13:10", end: "13:50" },
     { num: 7, start: "14:00", end: "14:40" }, { num: 8, start: "14:50", end: "15:30" }
 ];
+
 const schedules = [
     {
         1: { name: "Понедельник", short: "Пн", lessons: { 0: "Разговоры о важном", 1: "Физика", 2: "Литература", 3: "История", 4: "Алгебра", 5: "Вероятность", 6: "Физкультура", 7: "Информатика" }, rooms: {0:"301", 1:"301", 2:"308", 3:"210", 4:"313", 5:"313", 6:"Спортзал", 7:"301"} },
@@ -44,7 +43,6 @@ const schedules = [
         5: { name: "Пятница", short: "Пт", lessons: { 1: "Английский язык", 2: "История", 3: "Русский язык", 4: "Математика" }, rooms: {} }
     }
 ];
-
 const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
 const swiper = document.getElementById('swiper'); const pullIndicator = document.getElementById('pull-indicator'); const pullSvg = document.getElementById('pull-svg');
 let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0, dragDirection = null, lastHeartbeat = Date.now(), activePalette = null;
@@ -58,13 +56,15 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const list = isDark ? darkPalettes : lightPalettes;
-    activePalette = list[Math.floor(Math.random() * list.length)]; // СЛУЧАЙНЫЙ ВЫБОР ИЗ РАСШИРЕННОЙ БАЗЫ
-    const soloColor = activePalette.colors[0]; // ЖЕСТКАЯ ФИКСАЦИЯ ИНДЕКСА ЦВЕТА НАВИГАЦИИ
+    const pool = isDark ? darkPalettes : lightPalettes;
+    activePalette = pool[Math.floor(Math.random() * pool.length)]; // Берем случайную схему из расширенной матрицы
+    
+    const soloColor = activePalette.colors[0]; // ГАРАНТИРОВАННЫЙ ФИКС ЦВЕТА КНОПОК ДЕНЬ/НЕДЕЛЯ
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
 }
+
 function initBlobs() {
     blobs = [];
     for (let i = 0; i < 5; i++) {
@@ -76,7 +76,6 @@ function initBlobs() {
         });
     }
 }
-
 function renderLoop() {
     if (!activePalette) selectRandomPalette();
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -127,3 +126,161 @@ window.addEventListener('touchstart', e => {
         if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box') && !e.target.closest('.switch-name-link')) { mouse.active = true; updateMousePos(e); }
     }
 });
+window.addEventListener('touchmove', e => {
+    if (isZuming && e.touches.length === 2 && currentIdx === 1) {
+        e.preventDefault();
+        let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        let factor = currentHypot / (startHypot || 1); matrixScale = Math.min(Math.max(matrixScale * factor, 1.0), 2.5); 
+        document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; startHypot = currentHypot; return;
+    }
+    if (isPanning && e.touches.length === 1 && matrixScale > 1.05 && currentIdx === 1) {
+        e.preventDefault(); panX = e.touches[0].clientX - startPanX; panY = e.touches[0].clientY - startPanY;
+        const box = document.querySelector('.week-matrix-box'); let maxPanX = (matrixScale - 1) * box.offsetWidth * 0.4; let maxPanY = (matrixScale - 1) * box.offsetHeight * 0.5;
+        panX = Math.min(Math.max(panX, -maxPanX - 100), maxPanX + 50); panY = Math.min(Math.max(panY, -maxPanY - 120), 20);
+        document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; return;
+    }
+    if (!isDragging || e.touches.length > 1) return;
+    if (currentIdx === 1 && matrixScale > 1.05) return;
+    
+    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY; if (mouse.active) updateMousePos(e);
+    if (!dragDirection) {
+        if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
+        else if (diffY > 15 && currentIdx === 0 && document.querySelector('.lessons-list').scrollTop <= 1) dragDirection = 'pull';
+    }
+    if (dragDirection === 'horizontal') { currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`; }
+    else if (dragDirection === 'pull') { e.preventDefault(); let pullDistance = Math.min(diffY * 0.4, 90); pullIndicator.style.transform = `translate3d(-50%,${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1); pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`; }
+}, { passive: false });
+
+window.addEventListener('touchend', () => {
+    isDragging = false; isZuming = false; isPanning = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
+    if (dragDirection === 'horizontal') { let movedBy = currentTranslate - prevTranslate; if (movedBy < -80 && currentIdx < 1) currentIdx++; if (movedBy > 80 && currentIdx > 0) currentIdx--; switchScreen(currentIdx); }
+    else if (dragDirection === 'pull') { let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g,'')) || 0; pullIndicator.style.transition = 'all 0.3s ease'; if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); } else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; } }
+});
+
+function switchScreen(index) {
+    currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
+    const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week');
+    sDay.style.transition = sWeek.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'; swiper.style.transform = 'none';
+    if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) rotateY(0deg)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(100%,0,-300px) rotateY(90deg)'; sWeek.style.opacity = '0'; }
+    else { sDay.style.transform = 'translate3d(-100%,0,-300px) rotateY(-90deg)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0) rotateY(0deg)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
+    const shift = (document.querySelector('.navigation-tabs').offsetWidth - 12) / 2;
+    document.getElementById('nav-carriage').style.transform = `translateX(${index * shift}px)`;
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
+}
+
+function buildMatrix() {
+    const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
+    let currentData = schedules[currentUser];
+    let corner = document.createElement('div'); corner.className = 'matrix-cell header'; corner.innerText = '№'; grid.appendChild(corner);
+    for (let d = 1; d <= 5; d++) { let cell = document.createElement('div'); cell.className = 'matrix-cell header'; cell.innerText = currentData[d].short; grid.appendChild(cell); }
+    for (let l = 0; l <= 8; l++) {
+        let numCell = document.createElement('div'); numCell.className = 'matrix-cell num-col'; numCell.innerText = l; grid.appendChild(numCell);
+        for (let d = 1; d <= 5; d++) {
+            let cell = document.createElement('div'); const name = currentData[d].lessons[l]; cell.className = name ? 'matrix-cell' : 'matrix-cell empty';
+            if (name) { cell.innerText = name; if (name.length > 11) cell.style.fontSize = '7px'; if (name.length > 14) cell.style.fontSize = '6px'; }
+            grid.appendChild(cell);
+        }
+    }
+}
+window.addEventListener('click', e => { 
+    if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
+    let nameLink = e.target.closest('.switch-name-link');
+    if (nameLink) {
+        currentUser = currentUser === 0 ? 1 : 0; nameLink.innerText = currentUser === 0 ? "Кирилла" : "Жени";
+        buildMatrix(); updateLogic(); return;
+    }
+    if (e.target.closest('.week-matrix-box')) {
+        let currentTime = Date.now(); let tapLength = currentTime - lastTapTime;
+        if (tapLength < 300 && tapLength > 0) { matrixScale = 1; panX = 0; panY = 0; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; grid.style.transform = 'translate3d(0, 0, 0) scale(1)'; e.preventDefault(); return; }
+        lastTapTime = currentTime;
+    }
+    activePalette = null; selectRandomPalette(); 
+});
+
+function updateLogic() {
+    const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes(), currentSecs = now.getSeconds();
+    if (Date.now() - lastHeartbeat > 120000) document.getElementById('outdated-badge').classList.add('show'); lastHeartbeat = Date.now();
+    let currentData = schedules[currentUser];
+    let isWeekend = (day === 0 || day === 6), targetDay = day;
+    if (!isWeekend && currentData[day]) {
+        const lastLessonNum = Math.max(...Object.keys(currentData[day].lessons).map(Number));
+        if (currentMinutes > parseTime(timeTable.find(t=>t.num===lastLessonNum).end)) { targetDay = day + 1; if (targetDay > 5) targetDay = 1; }
+    } else if (isWeekend) { targetDay = 1; }
+    const isDisplayingToday = (targetDay === day); const activeDayInfo = currentData[targetDay];
+    document.getElementById('day-title').innerText = isDisplayingToday ? `Сегодня (${activeDayInfo.name})` : `Расписание на завтра (${activeDayInfo.name})`;
+    const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
+    
+    let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!", lessonProgressPercent = 0, currentBreakTimePassed = 0, currentBreakTotal = 1;
+    const tCard = document.getElementById('main-timer-card'); tCard.className = "timer-card gyro-tilt";
+    
+    if (isDisplayingToday && currentData[day]) {
+        const todayLessons = currentData[day].lessons, firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number)), firstLessonStart = parseTime(timeTable.find(t=>t.num===firstLessonNum).start);
+        if (currentMinutes < firstLessonStart) {
+            let totalSecsDiff = (firstLessonStart * 60) - (currentMinutes * 60 + currentSecs);
+            currentStatusText = "До начала уроков"; 
+            if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
+            else { let diff = firstLessonStart - currentMinutes; timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)} ч. ${diff % 60} мин.` : `${diff} мин.`; }
+            subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
+        } else {
+            for (let lNum of Object.keys(todayLessons).map(Number)) {
+                let tBox = timeTable.find(t=>t.num===lNum); let startM = parseTime(tBox.start), endM = parseTime(tBox.end);
+                if (currentMinutes >= startM && currentMinutes <= endM) {
+                    activeLessonId = lNum; currentStatusText = `Идет ${lNum === 0 ? '0-й' : lNum + '-й'} урок`;
+                    let totalSecsDiff = (endM * 60) - (currentMinutes * 60 + currentSecs);
+                    if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
+                    else { timeDiffText = `${endM - currentMinutes} мин.`; }
+                    subText = `До конца урока: ${todayLessons[lNum]}`;
+                    lessonProgressPercent = (currentMinutes * 60 + currentSecs - startM * 60) / (endM * 60 - startM * 60); break;
+                }
+            }
+            if (activeLessonId === null) {
+                const lessonsKeys = Object.keys(todayLessons).map(Number).sort();
+                for (let i = 0; i < lessonsKeys.length - 1; i++) {
+                    let currEnd = parseTime(timeTable.find(t=>t.num===lessonsKeys[i]).end), nextStart = parseTime(timeTable.find(t=>t.num===lessonsKeys[i+1]).start);
+                    if (currentMinutes > currEnd && currentMinutes < nextStart) {
+                        let totalSecsDiff = (nextStart * 60) - (currentMinutes * 60 + currentSecs);
+                        currentStatusText = "До конца перемены";
+                        if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
+                        else { let diff = nextStart - currentMinutes; timeDiffText = `${diff} мин.`; }
+                        subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
+                        currentBreakTotal = nextStart - currEnd; currentBreakTimePassed = currentMinutes - currEnd;
+                        if ((nextStart - currentMinutes) <= 2) tCard.classList.add('break-warning'); else tCard.classList.add('break-active'); break;
+                    }
+                }
+            }
+        }
+    } else { 
+        currentStatusText = "Уроки завершены"; 
+        timeDiffText = `<div class="cyber-rest-box"><div class="cyber-rest-line"></div><div class="cyber-rest-status">ОТДЫХ</div><div class="cyber-rest-line"></div></div>`; 
+        subText = `Следующий день: ${activeDayInfo.name}`; 
+    }
+    document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerHTML = timeDiffText; document.getElementById('timer-sub').innerText = subText;
+    
+    const activeLessonsKeys = Object.keys(activeDayInfo.lessons).map(Number).sort((a,b)=>a-b);
+    for (let idx = 0; idx < activeLessonsKeys.length; idx++) {
+        const slot = activeLessonsKeys[idx]; const name = activeDayInfo.lessons[slot];
+        const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
+        const currentSlotTime = timeTable.find(t => t.num === slot);
+        
+        let progressHTML = '', roomHTML = '', breakBadgeHTML = '';
+        if (activeLessonId === slot) { progressHTML = `<div class="lesson-progress-fill" style="width: ${(lessonProgressPercent * 100).toFixed(1)}%"></div>`; }
+        if (activeDayInfo.rooms && activeDayInfo.rooms[slot]) { roomHTML = `<div class="lesson-room-sub">каб. ${activeDayInfo.rooms[slot]}</div>`; }
+        
+        if (idx < activeLessonsKeys.length - 1) {
+            const nextSlot = activeLessonsKeys[idx + 1]; const nextSlotTime = timeTable.find(t => t.num === nextSlot);
+            if (currentSlotTime && nextSlotTime) {
+                let breakDuration = parseTime(nextSlotTime.start) - parseTime(currentSlotTime.end);
+                if (breakDuration > 0) {
+                    let arcOffset = 88; let isThisBreakNow = (isDisplayingToday && currentMinutes > parseTime(currentSlotTime.end) && currentMinutes < parseTime(nextSlotTime.start));
+                    let currentOffset = isThisBreakNow ? arcOffset - (arcOffset * ((currentBreakTimePassed * 60 + currentSecs) / (currentBreakTotal * 60))) : arcOffset;
+                    breakBadgeHTML = `<div class="break-radial-container"><svg class="break-radial-svg" viewBox="0 0 32 32"><circle class="break-radial-bg" cx="16" cy="16" r="14"/><circle class="break-radial-track" cx="16" cy="16" r="14" stroke-dasharray="${arcOffset}" stroke-dashoffset="${currentOffset}"/></svg><span class="break-radial-num">${breakDuration}</span></div>`;
+                }
+            }
+        } else { breakBadgeHTML = `<div class="break-radial-spacer"></div>`; }
+        row.innerHTML = `${progressHTML}<div class="lesson-left"><div class="lesson-title-block"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div>${roomHTML}</div><div class="lesson-meta"><div class="lesson-time-row"><span>${currentSlotTime ? currentSlotTime.start : "--:--"}</span>${breakBadgeHTML}</div></div>`;
+        listContainer.appendChild(row);
+    }
+}
+
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
+buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 1000); window.addEventListener('resize', resizeCanvas); renderLoop();
