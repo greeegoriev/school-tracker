@@ -40,7 +40,7 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    const soloColor = activePalette.colors[0]; // ГАРАНТИРОВАННЫЙ ИНДЕКС ДЛЯ ЦВЕТА КНОПОК НАВИГАЦИИ
+    const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -93,29 +93,29 @@ window.addEventListener('touchstart', e => {
     if (e.touches.length === 2 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
         let rect = grid.getBoundingClientRect();
-        let midX = ((e.touches.clientX + e.touches.clientX) / 2) - rect.left;
-        let midY = ((e.touches.clientY + e.touches.clientY) / 2) - rect.top;
+        let midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+        let midY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
         grid.style.transformOrigin = `${midX}px ${midY}px`;
-        startHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
+        startHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         return;
     }
     if (e.touches.length === 1) {
         if (e.target.closest('.week-matrix-box') && matrixScale > 1.05) {
-            isPanning = true; isDragging = false; startPanX = e.touches.clientX - panX; startPanY = e.touches.clientY - panY; return;
+            isPanning = true; isDragging = false; startPanX = e.touches[0].clientX - panX; startPanY = e.touches[0].clientY - panY; return;
         }
-        isDragging = true; dragDirection = null; startX = e.touches.clientX; startY = e.touches.clientY;
+        isDragging = true; dragDirection = null; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
         if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box') && !e.target.closest('.switch-name-link')) { mouse.active = true; updateMousePos(e); }
     }
 });
 window.addEventListener('touchmove', e => {
     if (isZuming && e.touches.length === 2) {
         e.preventDefault();
-        let currentHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
+        let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         let factor = currentHypot / (startHypot || 1); matrixScale = Math.min(Math.max(matrixScale * factor, 1.0), 2.5); 
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; startHypot = currentHypot; return;
     }
     if (isPanning && e.touches.length === 1 && matrixScale > 1.05) {
-        e.preventDefault(); panX = e.touches.clientX - startPanX; panY = e.touches.clientY - startPanY;
+        e.preventDefault(); panX = e.touches[0].clientX - startPanX; panY = e.touches[0].clientY - startPanY;
         const box = document.querySelector('.week-matrix-box'); let maxPanX = (matrixScale - 1) * box.offsetWidth * 0.4; let maxPanY = (matrixScale - 1) * box.offsetHeight * 0.5;
         panX = Math.min(Math.max(panX, -maxPanX - 100), maxPanX + 50); panY = Math.min(Math.max(panY, -maxPanY - 120), 20);
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; return;
@@ -123,11 +123,9 @@ window.addEventListener('touchmove', e => {
     if (!isDragging || e.touches.length > 1) return;
     if (currentIdx === 1 && matrixScale > 1.05) return;
     
-    let diffX = e.touches.clientX - startX, diffY = e.touches.clientY - startY; if (mouse.active) updateMousePos(e);
-    
+    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY; if (mouse.active) updateMousePos(e);
     if (!dragDirection) {
         if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
-        // 🛠️ ФИКС: Слушатель считывает скролл родительского Bento-бокса со стопроцентной точностью
         else if (diffY > 15 && currentIdx === 0 && document.querySelector('.lessons-list').scrollTop === 0) dragDirection = 'pull';
     }
     if (dragDirection === 'horizontal') { currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`; }
