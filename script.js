@@ -48,7 +48,7 @@ let blobs = []; let mouse = { x: null, y: null, targetX: null, targetY: null, ac
 let matrixScale = 1, startHypot = 0, isZuming = false, lastTapTime = 0;
 let panX = 0, panY = 0, startPanX = 0, startPanY = 0, isPanning = false;
 
-let gyroX = 0, gyroY = 0, restRotateX = 0, restRotateY = 0, restIsDragging = false, restStartX = 0, restStartY = 0;
+let gyroX = 0, gyroY = 0; // Убрали переменные тач-вращения плашки Отдыха
 
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
@@ -57,7 +57,7 @@ function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const pool = isDark ? darkPalettes : lightPalettes;
     activePalette = pool[Math.floor(Math.random() * pool.length)];
-    const soloColor = activePalette.colors[0]; // ГАРАНТИРОВАННЫЙ ИНДЕКС ЦВЕТА НАВИГАЦИИ ДЕНЬ/НЕДЕЛЯ
+    const soloColor = activePalette.colors[0]; // ФИКС НАВИГАЦИИ: Извлекаем строго строковый HEX
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -97,6 +97,7 @@ function updateMousePos(e) {
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
+// 🛠️ ИСПРАВЛЕНО: Параллакс гироскопа управляет ТОЛЬКО основными картами Bento. С плашки Отдыха всё убрано!
 window.addEventListener('deviceorientation', e => {
     if (!e.gamma || !e.beta) return;
     gyroY = Math.min(Math.max(e.gamma / 1.5, -15), 15);
@@ -105,60 +106,41 @@ window.addEventListener('deviceorientation', e => {
     document.querySelectorAll('.timer-card, .day-schedule-box, .week-matrix-box').forEach(card => {
         card.style.transform = `rotateX(${gyroX}deg) rotateY(${gyroY}deg) translateZ(10px)`;
     });
-    
-    const restBox = document.querySelector('.cyber-rest-box');
-    if (restBox && !restIsDragging) {
-        restBox.style.transform = `rotateX(${-gyroX * 1.4}deg) rotateY(${-gyroY * 1.4}deg) rotateZ(-2deg)`;
-    }
 });
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
-    
-    let restTarget = e.target.closest('.cyber-rest-box');
-    if (restTarget) { 
-        restIsDragging = true; const t = e.touches[0]; restStartX = t.clientX; restStartY = t.clientY; 
-        const rb = document.querySelector('.cyber-rest-box'); if(rb) rb.style.transition = 'none';
-        return; 
-    }
 
     if (e.touches.length === 2 && currentIdx === 1 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
         let rect = grid.getBoundingClientRect();
-        let midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
-        let midY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+        let midX = ((e.touches.clientX + e.touches.clientX) / 2) - rect.left;
+        let midY = ((e.touches.clientY + e.touches.clientY) / 2) - rect.top;
         grid.style.transformOrigin = `${midX}px ${midY}px`;
-        startHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        startHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
         return;
     }
     if (e.touches.length === 1) {
         if (currentIdx === 1 && e.target.closest('.week-matrix-box') && matrixScale > 1.05) {
-            isPanning = true; isDragging = false; startPanX = e.touches[0].clientX - panX; startPanY = e.touches[0].clientY - panY; return;
+            isPanning = true; isDragging = false; startPanX = e.touches.clientX - panX; startPanY = e.touches.clientY - panY; return;
         }
-        isDragging = true; dragDirection = null; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        isDragging = true; dragDirection = null; startX = e.touches.clientX; startY = e.touches.clientY;
         if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box') && !e.target.closest('.switch-name-link')) { mouse.active = true; updateMousePos(e); }
     }
 });
 
 window.addEventListener('touchmove', e => {
-    if (restIsDragging) {
-        const t = e.touches[0]; let dx = t.clientX - restStartX; let dy = t.clientY - restStartY;
-        restRotateY = Math.min(Math.max(restRotateY + dx * 0.4, -45), 40); restRotateX = Math.min(Math.max(restRotateX - dy * 0.4, -40), 40);
-        let restBox = document.querySelector('.cyber-rest-box');
-        if (restBox) restBox.style.transform = `rotateX(${restRotateX}deg) rotateY(${restRotateY}deg) scale(1.05) rotateZ(-2deg)`;
-        restStartX = t.clientX; restStartY = t.clientY; return;
-    }
     if (isZuming && e.touches.length === 2 && currentIdx === 1) {
         e.preventDefault();
-        let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        let currentHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
         let factor = currentHypot / (startHypot || 1); matrixScale = Math.min(Math.max(matrixScale * factor, 1.0), 2.5); 
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; startHypot = currentHypot; return;
     }
     if (isPanning && e.touches.length === 1 && matrixScale > 1.05 && currentIdx === 1) {
-        e.preventDefault(); panX = e.touches[0].clientX - startPanX; panY = e.touches[0].clientY - startPanY;
+        e.preventDefault(); panX = e.touches.clientX - startPanX; panY = e.touches.clientY - startPanY;
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; return;
     }
     if (!isDragging || e.touches.length > 1) return;
-    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY;
+    let diffX = e.touches.clientX - startX, diffY = e.touches.clientY - startY;
     if (!dragDirection) {
         if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
         else if (diffY > 15 && currentIdx === 0 && document.querySelector('.lessons-list').scrollTop <= 1) dragDirection = 'pull';
@@ -168,11 +150,11 @@ window.addEventListener('touchmove', e => {
 }, { passive: false });
 
 window.addEventListener('touchend', () => {
-    if (restIsDragging) { restIsDragging = false; const rb = document.querySelector('.cyber-rest-box'); if (rb) { rb.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'; rb.style.transform = `rotateX(${-gyroX * 1.4}deg) rotateY(${-gyroY * 1.4}deg) rotateZ(-2deg)`; } }
     isDragging = false; isZuming = false; isPanning = false; mouse.active = false;
     if (dragDirection === 'horizontal') { let movedBy = currentTranslate - prevTranslate; if (movedBy < -80 && currentIdx < 1) currentIdx++; if (movedBy > 80 && currentIdx > 0) currentIdx--; switchScreen(currentIdx); }
     else if (dragDirection === 'pull') { let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g,'')) || 0; pullIndicator.style.transition = 'all 0.3s ease'; if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); } else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; } }
 });
+
 function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week');
@@ -183,7 +165,6 @@ function switchScreen(index) {
     document.getElementById('nav-carriage').style.transform = `translateX(${index * shift}px)`;
     document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
 }
-
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
     let currentData = schedules[currentUser];
@@ -263,7 +244,6 @@ function updateLogic() {
         timeDiffText = `<div class="cyber-rest-box"><div class="cyber-rest-status">ОТДЫХ</div></div>`; 
         subText = `Следующий день: ${activeDayInfo.name}`; 
     }
-    document.documentElement.style.setProperty('--current-idx', currentIdx);
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerHTML = timeDiffText; document.getElementById('timer-sub').innerText = subText;
     
     const activeLessonsKeys = Object.keys(activeDayInfo.lessons).map(Number).sort((a,b)=>a-b);
@@ -289,4 +269,5 @@ function updateLogic() {
         listContainer.appendChild(row);
     }
 }
-function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 1000); window.addEventListener('resize', resizeCanvas); renderLoop();
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
+buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 1000); window.addEventListener('resize', resizeCanvas); renderLoop();
