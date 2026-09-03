@@ -36,24 +36,60 @@ window.addEventListener('touchend', () => {
     switchScreen(currentIdx);
 });
 
-// УЛЬТРАСОВРЕМЕННАЯ НАВИГАЦИЯ С РАНДОМНЫМИ ВАУ-АНИМАЦИЯМИ (ТРЕНД 2026)
+window.addEventListener('click', (e) => {
+    if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
+    generateFluidBackground();
+});
+
+const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); }
+
+function generateFluidBackground() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const darkPalettes = [
+        { base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
+        { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
+        { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }
+    ];
+    const lightPalettes = [
+        { base: '#fff5f7', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] },
+        { base: '#f0f4ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] },
+        { base: '#f7fff5', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }
+    ];
+    const list = isDark ? darkPalettes : lightPalettes; const selected = list[Math.floor(Math.random() * list.length)];
+    
+    document.documentElement.style.setProperty('--accent', selected.colors[0]);
+    document.documentElement.style.setProperty('--neon-glow', selected.colors[0] + (isDark ? '66' : '33'));
+
+    ctx.fillStyle = selected.base; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const positions = [{ x: 0, y: 0 }, { x: canvas.width, y: 0 }, { x: 0, y: canvas.height }, { x: canvas.width, y: canvas.height }];
+    
+    positions.forEach((pos, index) => {
+        ctx.save(); let offsetX = (Math.random() - 0.5) * (canvas.width * 0.4); let offsetY = (Math.random() - 0.5) * (canvas.height * 0.4);
+        let targetX = pos.x + offsetX; let targetY = pos.y + offsetY; let radius = Math.random() * (canvas.width * 0.8) + canvas.width * 0.4;
+        let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
+        
+        radialGrad.addColorStop(0, selected.colors[index] + (isDark ? '77' : 'ff')); 
+        radialGrad.addColorStop(0.5, selected.colors[index] + (isDark ? '22' : '44')); 
+        radialGrad.addColorStop(1, 'transparent');
+        
+        ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply';
+        ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    });
+}
 function switchScreen(index) {
     currentIdx = index;
     currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
 
     const sDay = document.getElementById('slide-day');
     const sWeek = document.getElementById('slide-week');
-    
-    // Выбираем случайный эффект от 1 до 3
     const randomEffect = Math.floor(Math.random() * 3) + 1;
     
-    // Сбрасываем старые стили переходов
     sDay.style.transition = sWeek.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
     swiper.style.transition = 'none'; 
-    swiper.style.transform = 'none'; // Отключаем старый сдвиг swiper, теперь анимация внутри слайдов!
+    swiper.style.transform = 'none';
 
     if (randomEffect === 1) {
-        // Эффект 1: 3D Cosmic Flip (Космический разворот)
         if (index === 0) {
             sDay.style.transform = 'translate3d(0, 0, 0) rotateY(0deg)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)';
             sWeek.style.transform = 'translate3d(100%, 0, -300px) rotateY(90deg)'; sWeek.style.opacity = '0';
@@ -62,7 +98,6 @@ function switchScreen(index) {
             sWeek.style.transform = 'translate3d(-100%, 0, 0) rotateY(0deg)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)';
         }
     } else if (randomEffect === 2) {
-        // Эффект 2: Fluid Scale Fade (Пружинящее сжатие)
         if (index === 0) {
             sDay.style.transform = 'translate3d(0,0,0) scale(1)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)';
             sWeek.style.transform = 'translate3d(0,0,0) scale(0.7)'; sWeek.style.opacity = '0'; sWeek.style.filter = 'blur(15px)';
@@ -71,7 +106,6 @@ function switchScreen(index) {
             sWeek.style.transform = 'translate3d(-100%,0,0) scale(1)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)';
         }
     } else {
-        // Эффект 3: Cyber Glitch Slide (Кинетический сдвиг с размытием)
         if (index === 0) {
             sDay.style.transform = 'translate3d(0, 0, 0)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)';
             sWeek.style.transform = 'translate3d(100%, 0, 0)'; sWeek.style.opacity = '0';
@@ -81,26 +115,16 @@ function switchScreen(index) {
         }
     }
 
-    // Передвигаем неоновую каретку внутри неподвижной плашки
-    document.getElementById('nav-carriage').style.transform = `translateX(${index * calcCarriageShift()}px)`;
+    const tabsContainer = document.querySelector('.navigation-tabs');
+    const shift = (tabsContainer.offsetWidth - 12) / 2;
+    document.getElementById('nav-carriage').style.transform = `translateX(${index * shift}px)`;
     
-    // Обновляем активные классы кнопок
     document.querySelectorAll('.tab-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === index);
     });
 
     generateFluidBackground();
 }
-
-function calcCarriageShift() {
-    const tabsContainer = document.querySelector('.navigation-tabs');
-    return (tabsContainer.offsetWidth - 12) / 2;
-}
-
-window.addEventListener('click', (e) => {
-    if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
-    generateFluidBackground();
-});
 
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
@@ -123,44 +147,6 @@ function buildMatrix() {
     }
 }
 
-const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
-function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); }
-
-function generateFluidBackground() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const darkPalettes = [
-        { base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
-        { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
-        { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }
-    ];
-    const lightPalettes = [
-        { base: '#fff5f7', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] },
-        { base: '#f0f4ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] },
-        { base: '#f7fff5', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }
-    ];
-    const list = isDark ? darkPalettes : lightPalettes; const selected = list[Math.floor(Math.random() * list.length)];
-    
-    // Передаем цвет в CSS-переменные для динамической тонировки плашек
-    document.documentElement.style.setProperty('--accent', selected.colors[0]);
-    document.documentElement.style.setProperty('--neon-glow', selected.colors[0] + (isDark ? '66' : '33'));
-
-    ctx.fillStyle = selected.base; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const positions = [{ x: 0, y: 0 }, { x: canvas.width, y: 0 }, { x: 0, y: canvas.height }, { x: canvas.width, y: canvas.height }];
-    
-    positions.forEach((pos, index) => {
-        ctx.save(); let offsetX = (Math.random() - 0.5) * (canvas.width * 0.4); let offsetY = (Math.random() - 0.5) * (canvas.height * 0.4);
-        let targetX = pos.x + offsetX; let targetY = pos.y + offsetY; let radius = Math.random() * (canvas.width * 0.8) + canvas.width * 0.4;
-        let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
-        
-        radialGrad.addColorStop(0, selected.colors[index] + (isDark ? '77' : 'ff')); 
-        radialGrad.addColorStop(0.5, selected.colors[index] + (isDark ? '22' : '44')); 
-        radialGrad.addColorStop(1, 'transparent');
-        
-        ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply';
-        ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-    });
-}
-
 window.addEventListener('deviceorientation', e => {
     if (!e.gamma || !e.beta) return;
     let x = Math.min(Math.max(e.gamma, -30), 30) / 1.5; let y = Math.min(Math.max(e.beta - 45, -30), 30) / 1.5;
@@ -172,4 +158,53 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 
 function updateLogic() {
     const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes();
-    let isWeekend = (day === 0 || day === 6), targetDay = day;if (!isWeekend && daysData[day]) {const lastLessonNum = Math.max(...Object.keys(daysData[day].lessons).map(Number));const lastLessonEnd = parseTime(timeTable[lastLessonNum - 1].end);if (currentMinutes > lastLessonEnd) { targetDay = day + 1; if (targetDay > 5) targetDay = 1; }} else if (isWeekend) { targetDay = 1; }const isDisplayingToday = (targetDay === day); const activeDayInfo = daysData[targetDay];document.getElementById('day-title').innerText = isDisplayingToday ? Сегодня (${activeDayInfo.name}) : Расписание на завтра (${activeDayInfo.name});const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!";if (isDisplayingToday && daysData[day]) {const todayLessons = daysData[day].lessons;const firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number));const firstLessonStart = parseTime(timeTable[firstLessonNum - 1].start);if (currentMinutes < firstLessonStart) {currentStatusText = "До начала уроков"; let diff = firstLessonStart - currentMinutes;timeDiffText = ${Math.floor(diff / 60)}ч ${diff % 60}м; subText = Первый урок: ${todayLessons[firstLessonNum]};} else {for (let lNum of Object.keys(todayLessons).map(Number)) {let tBox = timeTable[lNum - 1];if (currentMinutes >= parseTime(tBox.start) && currentMinutes <= parseTime(tBox.end)) {activeLessonId = lNum; currentStatusText = Идет ${lNum}-й урок;timeDiffText = ${parseTime(tBox.end) - currentMinutes} мин; subText = До конца урока: ${todayLessons[lNum]}; break;}}if (!activeLessonId) {const lessonsKeys = Object.keys(todayLessons).map(Number).sort();for (let i = 0; i < lessonsKeys.length - 1; i++) {let currEnd = parseTime(timeTable[lessonsKeys[i] - 1].end); let nextStart = parseTime(timeTable[lessonsKeys[i+1] - 1].start);if (currentMinutes > currEnd && currentMinutes < nextStart) {currentStatusText = "Перемена"; timeDiffText = ${nextStart - currentMinutes} мин;subText = Следующий: ${todayLessons[lessonsKeys[i+1]]}; break;}}}}} else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = Следующий день: ${activeDayInfo.name}; }document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;for (let slot = 1; slot <= 8; slot++) {const name = activeDayInfo.lessons[slot]; if (!name) continue;const row = document.createElement('div'); row.className = lesson-row ${activeLessonId === slot ? 'active' : ''};const currentSlotTime = timeTable.find(t => t.num === slot);const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";row.innerHTML = <div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>;listContainer.appendChild(row);}}buildMatrix(); window.addEventListener('load', resizeCanvas); updateLogic(); setInterval(updateLogic, 20000);
+    let isWeekend = (day === 0 || day === 6), targetDay = day;
+    if (!isWeekend && daysData[day]) {
+        const lastLessonNum = Math.max(...Object.keys(daysData[day].lessons).map(Number));
+        const lastLessonEnd = parseTime(timeTable[lastLessonNum - 1].end);
+        if (currentMinutes > lastLessonEnd) { targetDay = day + 1; if (targetDay > 5) targetDay = 1; }
+    } else if (isWeekend) { targetDay = 1; }
+    const isDisplayingToday = (targetDay === day); const activeDayInfo = daysData[targetDay];
+    document.getElementById('day-title').innerText = isDisplayingToday ? `Сегодня (${activeDayInfo.name})` : `Расписание на завтра (${activeDayInfo.name})`;
+    const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
+    let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!";
+
+    if (isDisplayingToday && daysData[day]) {
+        const todayLessons = daysData[day].lessons;
+        const firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number));
+        const firstLessonStart = parseTime(timeTable[firstLessonNum - 1].start);
+        if (currentMinutes < firstLessonStart) {
+            currentStatusText = "До начала уроков"; let diff = firstLessonStart - currentMinutes;
+            timeDiffText = `${Math.floor(diff / 60)}ч ${diff % 60}м`; subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
+        } else {
+            for (let lNum of Object.keys(todayLessons).map(Number)) {
+                let tBox = timeTable[lNum - 1];
+                if (currentMinutes >= parseTime(tBox.start) && currentMinutes <= parseTime(tBox.end)) {
+                    activeLessonId = lNum; currentStatusText = `Идет ${lNum}-й урок`;
+                    timeDiffText = `${parseTime(tBox.end) - currentMinutes} мин`; subText = `До конца урока: ${todayLessons[lNum]}`; break;
+                }
+            }
+            if (!activeLessonId) {
+                const lessonsKeys = Object.keys(todayLessons).map(Number).sort();
+                for (let i = 0; i < lessonsKeys.length - 1; i++) {
+                    let currEnd = parseTime(timeTable[lessonsKeys[i] - 1].end); let nextStart = parseTime(timeTable[lessonsKeys[i+1] - 1].start);
+                    if (currentMinutes > currEnd && currentMinutes < nextStart) {
+                        currentStatusText = "Перемена"; timeDiffText = `${nextStart - currentMinutes} мин`;
+                        subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`; break;
+                    }
+                }
+            }
+        }
+    } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий день: ${activeDayInfo.name}`; }
+    document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
+    
+    for (let slot = 1; slot <= 8; slot++) {
+        const name = activeDayInfo.lessons[slot]; if (!name) continue;
+        const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
+        const currentSlotTime = timeTable.find(t => t.num === slot);
+        const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";
+        row.innerHTML = `<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>`;
+        listContainer.appendChild(row);
+    }
+}
+buildMatrix(); window.addEventListener('load', resizeCanvas); updateLogic(); setInterval(updateLogic, 20000);
