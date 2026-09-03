@@ -40,7 +40,8 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    const soloColor = activePalette.colors;
+    // ФИКС: Извлекаем строго нулевой элемент массива цветов, возвращая неоновые тона кнопкам дня/недели
+    const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -238,8 +239,6 @@ function updateLogic() {
         
         let progressHTML = '', roomHTML = '', breakBadgeHTML = '';
         if (activeLessonId === slot) { progressHTML = `<div class="lesson-progress-fill" style="width: ${(lessonProgressPercent * 100).toFixed(1)}%"></div>`; }
-        
-        // ИСПРАВЛЕНО: Текст "каб." переведен в нижний регистр для идеальной интеграции
         if (activeDayInfo.rooms && activeDayInfo.rooms[slot]) { roomHTML = `<div class="lesson-room-sub">каб. ${activeDayInfo.rooms[slot]}</div>`; }
         
         if (idx < activeLessonsKeys.length - 1) {
@@ -253,7 +252,7 @@ function updateLogic() {
                 }
             }
         } else {
-            // 🔄 ИСПРАВЛЕНО: Добавляем невидимый блок-распорку для последней строчки уроков
+            // Блок-распорка для идеального выравнивания времени последнего урока
             breakBadgeHTML = `<div class="break-radial-spacer"></div>`;
         }
         row.innerHTML = `${progressHTML}<div class="lesson-left"><div class="lesson-title-block"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div>${roomHTML}</div><div class="lesson-meta"><div class="lesson-time-row"><span>${currentSlotTime ? currentSlotTime.start : "--:--"}</span>${breakBadgeHTML}</div></div>`;
