@@ -17,27 +17,65 @@ const currentHour = new Date().getHours();
 document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 
 const swiper = document.getElementById('swiper');
-let startX = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0;
+const pullIndicator = document.getElementById('pull-indicator');
+const pullSvg = document.getElementById('pull-svg');
+let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0, dragDirection = null;
+let lastHeartbeat = Date.now();
+
+// 🌈 Интерактивные переменные трекинга координат пальца Кирилла
+let touchX = null, touchY = null, activePalette = null;
 
 window.addEventListener('touchstart', e => { 
-    if(e.target.closest('.navigation-tabs')) return;
-    startX = e.touches.clientX; isDragging = true; swiper.style.transition = 'none'; 
+    if(e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
+    startX = e.touches.clientX; startY = e.touches.clientY;
+    touchX = e.touches.clientX; touchY = e.touches.clientY;
+    isDragging = true; dragDirection = null; swiper.style.transition = 'none'; 
 });
+
 window.addEventListener('touchmove', e => {
     if (!isDragging) return;
-    currentTranslate = prevTranslate + (e.touches.clientX - startX);
-    swiper.style.transform = `translateX(${currentTranslate}px)`;
+    let diffX = e.touches.clientX - startX; let diffY = e.touches.clientY - startY;
+    
+    // Передаем живые координаты пальца в генератор холста Mesh
+    touchX = e.touches.clientX; touchY = e.touches.clientY;
+    if (dragDirection === 'horizontal' || dragDirection === 'pull') generateFluidBackground();
+
+    if (!dragDirection) {
+        if (Math.abs(diffX) > Math.abs(diffY)) dragDirection = 'horizontal';
+        else if (diffY > 0 && currentIdx === 0) dragDirection = 'pull';
+        else isDragging = false;
+    }
+    if (dragDirection === 'horizontal') {
+        currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`;
+    } else if (dragDirection === 'pull') {
+        let pullDistance = Math.min(diffY * 0.4, 90);
+        pullIndicator.style.transform = `translate3d(-50%, ${pullDistance}px, 0)`;
+        pullIndicator.style.opacity = Math.min(pullDistance / 60, 1);
+        pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
+    }
 });
+
 window.addEventListener('touchend', () => {
     if (!isDragging) return; isDragging = false;
-    let movedBy = currentTranslate - prevTranslate;
-    if (movedBy < -100 && currentIdx < 1) currentIdx++;
-    if (movedBy > 100 && currentIdx > 0) currentIdx--;
-    switchScreen(currentIdx);
+    if (dragDirection === 'horizontal') {
+        let movedBy = currentTranslate - prevTranslate;
+        if (movedBy < -100 && currentIdx < 1) currentIdx++;
+        if (movedBy > 100 && currentIdx > 0) currentIdx--;
+        switchScreen(currentIdx);
+    } else if (dragDirection === 'pull') {
+        let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g, '')) || 0;
+        pullIndicator.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+        if (lastY > 55) {
+            pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)';
+            setTimeout(() => { location.reload(true); }, 600);
+        } else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; }
+    }
+    touchX = touchY = null; // Сбрасываем трекинг
 });
 
 window.addEventListener('click', (e) => {
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
+    activePalette = null; // Принудительно меняем палитру по клику
     generateFluidBackground();
 });
 
@@ -46,31 +84,37 @@ function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height 
 
 function generateFluidBackground() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const darkPalettes = [
-        { base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
-        { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
-        { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }
-    ];
-    const lightPalettes = [
-        { base: '#fff5f7', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] },
-        { base: '#f0f4ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] },
-        { base: '#f7fff5', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }
-    ];
-    const list = isDark ? darkPalettes : lightPalettes; const selected = list[Math.floor(Math.random() * list.length)];
+    const darkPalettes = [{ base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
+    const lightPalettes = [{ base: '#fff5f7', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] }, { base: '#f0f4ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] }, { base: '#f7fff5', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }];
     
-    document.documentElement.style.setProperty('--accent', selected.colors[0]);
-    document.documentElement.style.setProperty('--neon-glow', selected.colors[0] + (isDark ? '66' : '33'));
+    if(!activePalette) {
+        const list = isDark ? darkPalettes : lightPalettes;
+        activePalette = list[Math.floor(Math.random() * list.length)];
+    }
+    
+    document.documentElement.style.setProperty('--accent', activePalette.colors);
+    document.documentElement.style.setProperty('--neon-glow', activePalette.colors + (isDark ? '66' : '33'));
+    ctx.fillStyle = activePalette.base; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Генерируем 4 сферы в углах + 1 интерактивную сферу под пальцем Кирилла!
+    let positions = [{ x: 0, y: 0 }, { x: canvas.width, y: 0 }, { x: 0, y: canvas.height }, { x: canvas.width, y: canvas.height }];
+    if (touchX !== null && touchY !== null) {
+        positions.push({ x: touchX * 1.2, y: touchY * 1.2, isTouch: true });
+    }
 
-    ctx.fillStyle = selected.base; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const positions = [{ x: 0, y: 0 }, { x: canvas.width, y: 0 }, { x: 0, y: canvas.height }, { x: canvas.width, y: canvas.height }];
-    
     positions.forEach((pos, index) => {
-        ctx.save(); let offsetX = (Math.random() - 0.5) * (canvas.width * 0.4); let offsetY = (Math.random() - 0.5) * (canvas.height * 0.4);
-        let targetX = pos.x + offsetX; let targetY = pos.y + offsetY; let radius = Math.random() * (canvas.width * 0.8) + canvas.width * 0.4;
+        ctx.save();
+        let targetX = pos.x, targetY = pos.y;
+        if (!pos.isTouch) {
+            targetX += Math.sin(index + Date.now() * 0.0005) * 50; // Мягкое покачивание сфер
+            targetY += Math.cos(index + Date.now() * 0.0005) * 50;
+        }
+        let radius = pos.isTouch ? canvas.width * 0.5 : Math.random() * (canvas.width * 0.6) + canvas.width * 0.4;
         let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
+        let color = activePalette.colors[index % activePalette.colors.length];
         
-        radialGrad.addColorStop(0, selected.colors[index] + (isDark ? '77' : 'ff')); 
-        radialGrad.addColorStop(0.5, selected.colors[index] + (isDark ? '22' : '44')); 
+        radialGrad.addColorStop(0, color + (isDark ? '88' : 'ff')); 
+        radialGrad.addColorStop(0.5, color + (isDark ? '22' : '44')); 
         radialGrad.addColorStop(1, 'transparent');
         
         ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply';
@@ -78,16 +122,11 @@ function generateFluidBackground() {
     });
 }
 function switchScreen(index) {
-    currentIdx = index;
-    currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
-
-    const sDay = document.getElementById('slide-day');
-    const sWeek = document.getElementById('slide-week');
+    currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
+    const sDay = document.getElementById('slide-day'); const sWeek = document.getElementById('slide-week');
     const randomEffect = Math.floor(Math.random() * 3) + 1;
-    
     sDay.style.transition = sWeek.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
-    swiper.style.transition = 'none'; 
-    swiper.style.transform = 'none';
+    swiper.style.transition = 'none'; swiper.style.transform = 'none';
 
     if (randomEffect === 1) {
         if (index === 0) {
@@ -114,15 +153,10 @@ function switchScreen(index) {
             sWeek.style.transform = 'translate3d(-100%, 0, 0)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)';
         }
     }
-
     const tabsContainer = document.querySelector('.navigation-tabs');
     const shift = (tabsContainer.offsetWidth - 12) / 2;
     document.getElementById('nav-carriage').style.transform = `translateX(${index * shift}px)`;
-    
-    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
-    });
-
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => { btn.classList.toggle('active', i === index); });
     generateFluidBackground();
 }
 
@@ -137,11 +171,7 @@ function buildMatrix() {
         for (let d = 1; d <= 5; d++) {
             let cell = document.createElement('div'); const name = daysData[d].lessons[l];
             cell.className = name ? 'matrix-cell' : 'matrix-cell empty';
-            if (name) {
-                cell.innerText = name;
-                if (name.length > 11) cell.style.fontSize = '7px';
-                if (name.length > 14) cell.style.fontSize = '6px';
-            }
+            if (name) { cell.innerText = name; if (name.length > 11) cell.style.fontSize = '7px'; if (name.length > 14) cell.style.fontSize = '6px'; }
             grid.appendChild(cell);
         }
     }
@@ -156,8 +186,13 @@ window.addEventListener('deviceorientation', e => {
 
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
 
+// 🔔 УМНЫЙ АНАЛИЗАТОР ПЕРЕМЕН И СТАТУСОВ УРОКОВ
 function updateLogic() {
     const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const timeDelta = Date.now() - lastHeartbeat;
+    if (timeDelta > 120000) document.getElementById('outdated-badge').classList.add('show');
+    lastHeartbeat = Date.now();
+
     let isWeekend = (day === 0 || day === 6), targetDay = day;
     if (!isWeekend && daysData[day]) {
         const lastLessonNum = Math.max(...Object.keys(daysData[day].lessons).map(Number));
@@ -167,12 +202,17 @@ function updateLogic() {
     const isDisplayingToday = (targetDay === day); const activeDayInfo = daysData[targetDay];
     document.getElementById('day-title').innerText = isDisplayingToday ? `Сегодня (${activeDayInfo.name})` : `Расписание на завтра (${activeDayInfo.name})`;
     const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
-    let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!";
+    
+    let activeLessonId = null;
+    let currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!";
+    const tCard = document.getElementById('main-timer-card');
+    tCard.className = "timer-card gyro-tilt"; // Сбрасываем классы пульсаций
 
     if (isDisplayingToday && daysData[day]) {
         const todayLessons = daysData[day].lessons;
         const firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number));
         const firstLessonStart = parseTime(timeTable[firstLessonNum - 1].start);
+
         if (currentMinutes < firstLessonStart) {
             currentStatusText = "До начала уроков"; let diff = firstLessonStart - currentMinutes;
             timeDiffText = `${Math.floor(diff / 60)}ч ${diff % 60}м`; subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
@@ -184,13 +224,22 @@ function updateLogic() {
                     timeDiffText = `${parseTime(tBox.end) - currentMinutes} мин`; subText = `До конца урока: ${todayLessons[lNum]}`; break;
                 }
             }
+            // 🔔 АНАЛИЗ И ИНТЕРФЕЙС ПЕРЕМЕН
             if (!activeLessonId) {
                 const lessonsKeys = Object.keys(todayLessons).map(Number).sort();
                 for (let i = 0; i < lessonsKeys.length - 1; i++) {
-                    let currEnd = parseTime(timeTable[lessonsKeys[i] - 1].end); let nextStart = parseTime(timeTable[lessonsKeys[i+1] - 1].start);
+                    let currEnd = parseTime(timeTable[lessonsKeys[i] - 1].end);
+                    let nextStart = parseTime(timeTable[lessonsKeys[i+1] - 1].start);
                     if (currentMinutes > currEnd && currentMinutes < nextStart) {
-                        currentStatusText = "Перемена"; timeDiffText = `${nextStart - currentMinutes} мин`;
-                        subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`; break;
+                        let diff = nextStart - currentMinutes;
+                        currentStatusText = "Идет перемена";
+                        timeDiffText = `${diff} мин`;
+                        subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
+                        
+                        // Если до конца перемены осталось 2 минуты или меньше — карточка предупреждающе мигает красным!
+                        if (diff <= 2) tCard.classList.add('break-warning');
+                        else tCard.classList.add('break-active'); // Обычный неоновый пульс перемены
+                        break;
                     }
                 }
             }
@@ -202,8 +251,7 @@ function updateLogic() {
         const name = activeDayInfo.lessons[slot]; if (!name) continue;
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
-        const startTimeStr = currentSlotTime ? currentSlotTime.start : "--:--";
-        row.innerHTML = `<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${startTimeStr}</div></div>`;
+        row.innerHTML = `<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
         listContainer.appendChild(row);
     }
 }
