@@ -10,10 +10,7 @@ body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Unbounde
 .outdated-badge.show { transform: translateY(0); opacity: 1; }
 .outdated-badge span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #ff453a; }
 .swiper-container { position: relative; width: 100%; height: 100%; z-index: 2; display: flex; transform-style: preserve-3d; will-change: transform; }
-
-/* ИСПРАВЛЕНО: Разрешаем нативный вертикальный пулл-свайп для обновления */
 .slide { min-width: 100%; width: 100%; height: 100%; display: flex; flex-direction: column; padding: 24px 20px calc(90px + env(safe-area-inset-bottom)); padding-top: calc(20px + env(safe-area-inset-top)); transform-style: preserve-3d; backface-visibility: hidden; will-change: transform, opacity, filter; touch-action: pan-y; }
-
 .header-widget { text-align: center; margin-top: 10px; will-change: transform; transition: transform 0.1s ease-out; }
 .header-widget h1 { font-size: 22px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; color: var(--text-main); }
 .switch-name-link { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; text-shadow: 0 0 10px var(--neon-glow); transition: opacity 0.2s ease; }
@@ -31,24 +28,26 @@ body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Unbounde
 .lesson-row { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 18px !important; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden !important; }
 .lesson-row.active { background: rgba(5, 5, 8, 0.25) !important; border: 1px solid rgba(255, 255, 255, 0.05) !important; border-radius: 18px !important; box-shadow: 0 10px 30px var(--shadow), inset 0 0 15px var(--neon-glow) !important; overflow: hidden !important; }
 .lesson-progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 0; pointer-events: none; background: linear-gradient(90deg, #ff0055, #9900ff, #00ffcc) !important; opacity: 0.65; transition: width 1s linear; border-radius: 18px !important; }
-
-/* 🔄 ИСПРАВЛЕНО: Стили под левое расположение кабинета */
 .lesson-left, .lesson-meta { position: relative; z-index: 2; display: flex; flex-direction: column; }
+...
 .lesson-left { align-items: flex-start; gap: 2px; }
 .lesson-meta { align-items: flex-end; justify-content: center; font-size: 14px; font-weight: 700; }
 .lesson-title-block { display: flex; align-items: center; gap: 10px; }
 .lesson-num { font-size: 13px; font-weight: 800; color: var(--text-sub); width: 16px; }
 .lesson-row.active .lesson-num { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
 .lesson-name { font-size: 14px; font-weight: 700; letter-spacing: -0.3px; }
-.lesson-room-sub { font-size: 11px; color: var(--accent); font-weight: 800; padding-left: 26px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-/* 🌟 УЛЬТРАМОДНЫЙ ДЕФОРМИРОВАННЫЙ РАДИАЛЬНЫЙ КРУГ ПЕРЕМЕНЫ */
+/* 🔄 ИСПРАВЛЕНО: Кабинет в нижнем регистре, обычным полупрозрачным шрифтом */
+.lesson-room-sub { font-size: 13px; color: var(--text-sub); font-weight: 500; padding-left: 26px; letter-spacing: normal; text-transform: none; }
+
+/* 🌟 ИСПРАВЛЕНО: Пустой блок-распорка для последнего урока, чтобы идеально выровнять время по вертикали */
+.break-radial-spacer { display: inline-block; width: 32px; height: 32px; margin-left: 8px; }
+
 .break-radial-container { position: relative; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin-left: 8px; transform: rotate(-12deg) skewX(-4deg); filter: drop-shadow(0 2px 6px var(--neon-glow)); }
 .break-radial-svg { position: absolute; width: 100%; height: 100%; transform: rotate(-90deg); }
 .break-radial-bg { fill: rgba(255, 255, 255, 0.04); stroke: rgba(255, 255, 255, 0.08); stroke-width: 2.5; }
 .break-radial-track { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
 .break-radial-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 900; color: #ffffff; position: relative; z-index: 2; transform: translateZ(5px); text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
-
 .week-matrix-box { padding: 10px; height: 74vh; display: flex; flex-direction: column; margin-top: 15px; overflow: hidden; position: relative; touch-action: none; }
 .matrix-grid { display: grid; grid-template-columns: 24px repeat(5, 1fr); grid-template-rows: auto repeat(9, 1fr); gap: 4px; min-height: 540px; min-width: 320px; width: 100%; transform-origin: 0 0; will-change: transform; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .matrix-cell { display: flex; align-items: center; justify-content: center; text-align: center; font-size: 8px; font-weight: 700; border-radius: 8px; padding: 2px 1px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.04); line-height: 1.1; word-wrap: break-word; word-break: break-word; overflow: hidden; }
