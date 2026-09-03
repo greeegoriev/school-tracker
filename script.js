@@ -48,7 +48,7 @@ let blobs = []; let mouse = { x: null, y: null, targetX: null, targetY: null, ac
 let matrixScale = 1, startHypot = 0, isZuming = false, lastTapTime = 0;
 let panX = 0, panY = 0, startPanX = 0, startPanY = 0, isPanning = false;
 
-let gyroX = 0, gyroY = 0; // Убрали переменные тач-вращения плашки Отдыха
+let gyroX = 0, gyroY = 0;
 
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
@@ -57,7 +57,7 @@ function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const pool = isDark ? darkPalettes : lightPalettes;
     activePalette = pool[Math.floor(Math.random() * pool.length)];
-    const soloColor = activePalette.colors[0]; // ФИКС НАВИГАЦИИ: Извлекаем строго строковый HEX
+    const soloColor = activePalette.colors[0]; // ГАРАНТИРОВАННЫЙ ИНДЕКС ДЛЯ ПОДСВЕТКИ ДЕНЬ/НЕДЕЛЯ
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -93,11 +93,10 @@ function renderLoop() {
 }
 
 function updateMousePos(e) {
-    const rect = canvas.getBoundingClientRect(); const clientX = e.touches.length ? e.touches.clientX : e.clientX; const clientY = e.touches.length ? e.touches.clientY : e.clientY;
+    const rect = canvas.getBoundingClientRect(); const clientX = e.touches.length ? e.touches[0].clientX : e.clientX; const clientY = e.touches.length ? e.touches[0].clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
-// 🛠️ ИСПРАВЛЕНО: Параллакс гироскопа управляет ТОЛЬКО основными картами Bento. С плашки Отдыха всё убрано!
 window.addEventListener('deviceorientation', e => {
     if (!e.gamma || !e.beta) return;
     gyroY = Math.min(Math.max(e.gamma / 1.5, -15), 15);
@@ -110,20 +109,21 @@ window.addEventListener('deviceorientation', e => {
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
 
+    // 🛠️ ФИКС: Корректное считывание мультитача e.touches[0] и e.touches[1] для Pinch-to-Zoom недели
     if (e.touches.length === 2 && currentIdx === 1 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
         let rect = grid.getBoundingClientRect();
-        let midX = ((e.touches.clientX + e.touches.clientX) / 2) - rect.left;
-        let midY = ((e.touches.clientY + e.touches.clientY) / 2) - rect.top;
+        let midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+        let midY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
         grid.style.transformOrigin = `${midX}px ${midY}px`;
-        startHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
+        startHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         return;
     }
     if (e.touches.length === 1) {
         if (currentIdx === 1 && e.target.closest('.week-matrix-box') && matrixScale > 1.05) {
-            isPanning = true; isDragging = false; startPanX = e.touches.clientX - panX; startPanY = e.touches.clientY - panY; return;
+            isPanning = true; isDragging = false; startPanX = e.touches[0].clientX - panX; startPanY = e.touches[0].clientY - panY; return;
         }
-        isDragging = true; dragDirection = null; startX = e.touches.clientX; startY = e.touches.clientY;
+        isDragging = true; dragDirection = null; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
         if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box') && !e.target.closest('.switch-name-link')) { mouse.active = true; updateMousePos(e); }
     }
 });
@@ -131,16 +131,16 @@ window.addEventListener('touchstart', e => {
 window.addEventListener('touchmove', e => {
     if (isZuming && e.touches.length === 2 && currentIdx === 1) {
         e.preventDefault();
-        let currentHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
+        let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         let factor = currentHypot / (startHypot || 1); matrixScale = Math.min(Math.max(matrixScale * factor, 1.0), 2.5); 
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; startHypot = currentHypot; return;
     }
     if (isPanning && e.touches.length === 1 && matrixScale > 1.05 && currentIdx === 1) {
-        e.preventDefault(); panX = e.touches.clientX - startPanX; panY = e.touches.clientY - startPanY;
+        e.preventDefault(); panX = e.touches[0].clientX - startPanX; panY = e.touches[0].clientY - startPanY;
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; return;
     }
     if (!isDragging || e.touches.length > 1) return;
-    let diffX = e.touches.clientX - startX, diffY = e.touches.clientY - startY;
+    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY;
     if (!dragDirection) {
         if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
         else if (diffY > 15 && currentIdx === 0 && document.querySelector('.lessons-list').scrollTop <= 1) dragDirection = 'pull';
