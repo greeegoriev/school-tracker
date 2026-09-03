@@ -20,23 +20,24 @@ let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging 
 let blobs = [];
 let mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
 
+// Внедрено: Координаты для свободного 2D перемещения (Pan/Drag) по увеличенной сетке
 let matrixScale = 1, startHypot = 0, isZuming = false, lastTapTime = 0;
+let panX = 0, panY = 0, startPanX = 0, startPanY = 0, isPanning = false;
 
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
-
-const darkPalettes = [{ base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
-const lightPalettes = [{ base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] }, { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] }, { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }];
 
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    const soloColor = activePalette.colors[0]; // Исправлено: строго ПЕРВЫЙ цвет строки извлекается в CSS
+    const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
 }
+const darkPalettes = [{ base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
+const lightPalettes = [{ base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] }, { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] }, { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }];
 function initBlobs() {
     blobs = [];
     for (let i = 0; i < 5; i++) {
@@ -74,50 +75,71 @@ function renderLoop() {
 }
 
 function updateMousePos(e) {
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
     
-    // Внедрено: Магическое высчитывание центроида (живой точки касания пальцев) для Фокуса Зума
-    if (e.touches.length === 2 && e.target.closest('.week-matrix-box')) {
-        isZuming = true; isDragging = false; mouse.active = false;
+    // 1. ЕСЛИ ТАПНУЛИ ПО МАТРИЦЕ НЕДЕЛИ:
+    if (e.target.closest('.week-matrix-box')) {
         const grid = document.getElementById('matrix-grid');
-        grid.style.transition = 'none';
+        grid.style.transition = 'none'; // Отключаем плавность при таче, чтобы ничего не дергалось
         
-        let t1 = e.touches[0], t2 = e.touches[1];
-        let rect = grid.getBoundingClientRect();
-        // Находим геометрическую середину между подушечками двух пальцев Кирилла
-        let midX = ((t1.clientX + t2.clientX) / 2) - rect.left;
-        let midY = ((t1.clientY + t2.clientY) / 2) - rect.top;
-        
-        // Мгновенно перенаправляем "якорь" CSS трансформации в эту точку!
-        grid.style.transformOrigin = `${midX}px ${midY}px`;
-        startHypot = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-        return;
+        if (e.touches.length === 2) {
+            isZuming = true; isPanning = false; isDragging = false;
+            let t1 = e.touches[0], t2 = e.touches[1];
+            startHypot = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+            return;
+        } else if (e.touches.length === 1 && matrixScale > 1.05) {
+            // Если сетка ПРИБЛИЖЕНА, включаем режим свободного 2D перетаскивания (Pan) и глушим свайпы!
+            isPanning = true; isDragging = false;
+            startPanX = e.touches[0].clientX - panX;
+            startPanY = e.touches[0].clientY - panY;
+            return;
+        }
     }
     
-    isDragging = true; dragDirection = null; const touch = e.touches; startX = touch[0].clientX; startY = touch[0].clientY;
-    if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box') && e.touches.length === 1) { mouse.active = true; updateMousePos(e); }
+    // 2. ОБЫЧНЫЙ ОДИНОЧНЫЙ ТАП:
+    if (e.touches.length === 1) {
+        isDragging = true; dragDirection = null; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box')) { mouse.active = true; updateMousePos(e); }
+    }
 });
 
 window.addEventListener('touchmove', e => {
+    // А. ОБРАБОТКА РУЧНОГО ЗУМА ДВУМЯ ПАЛЬЦАМИ
     if (isZuming && e.touches.length === 2) {
         e.preventDefault();
         let t1 = e.touches[0], t2 = e.touches[1];
         let currentHypot = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
         let factor = currentHypot / (startHypot || 1);
-        matrixScale = Math.min(Math.max(matrixScale * factor, 0.7), 2.5); 
-        document.getElementById('matrix-grid').style.transform = `scale(${matrixScale})`;
+        matrixScale = Math.min(Math.max(matrixScale * factor, 1.0), 2.5); 
+        document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`;
         startHypot = currentHypot;
         return;
     }
+    
+    // Б. ИСПРАВЛЕНО: Свободное перетаскивание одним пальцем по увеличенной карте уроков
+    if (isPanning && e.touches.length === 1 && matrixScale > 1.05) {
+        e.preventDefault(); // Намертво блокируем улет карусели на вкладку "День"!
+        panX = e.touches[0].clientX - startPanX;
+        panY = e.touches[0].clientY - startPanY;
+        
+        // Ограничиваем вылет сетки за края экрана, чтобы Кирилл не потерял таблицу в пустоте
+        const box = document.querySelector('.week-matrix-box');
+        let maxPanX = (matrixScale - 1) * box.offsetWidth * 0.4;
+        let maxPanY = (matrixScale - 1) * box.offsetHeight * 0.5;
+        panX = Math.min(Math.max(panX, -maxPanX - 100), maxPanX + 50);
+        panY = Math.min(Math.max(panY, -maxPanY - 120), 20);
+        
+        document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`;
+        return;
+    }
+
     if (!isDragging || e.touches.length > 1) return;
-    const touch = e.touches; let diffX = touch[0].clientX - startX; let diffY = touch[0].clientY - startY;
+    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY;
     if (mouse.active) updateMousePos(e);
     
     if (!dragDirection) {
@@ -134,7 +156,7 @@ window.addEventListener('touchmove', e => {
     }
 }, { passive: false });
 window.addEventListener('touchend', () => {
-    isDragging = false; isZuming = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
+    isDragging = false; isZuming = false; isPanning = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
     if (dragDirection === 'horizontal') {
         let movedBy = currentTranslate - prevTranslate;
         if (movedBy < -100 && currentIdx < 1) currentIdx++; if (movedBy > 100 && currentIdx > 0) currentIdx--; switchScreen(currentIdx);
@@ -149,20 +171,18 @@ window.addEventListener('touchend', () => {
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
     
+    // ИСПРАВЛЕНО: При двойном тапе сбрасываем масштаб (100%) И плавно центрируем координаты (0, 0)
     if (e.target.closest('.week-matrix-box')) {
-        let currentTime = Date.now();
-        let tapLength = currentTime - lastTapTime;
+        let currentTime = Date.now(); let tapLength = currentTime - lastTapTime;
         if (tapLength < 300 && tapLength > 0) {
-            matrixScale = 1;
+            matrixScale = 1; panX = 0; panY = 0;
             const grid = document.getElementById('matrix-grid');
             grid.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
-            grid.style.transform = 'scale(1)';
-            e.preventDefault();
-            return;
+            grid.style.transform = 'translate3d(0, 0, 0) scale(1)';
+            e.preventDefault(); return;
         }
         lastTapTime = currentTime;
     }
-    
     activePalette = null; selectRandomPalette(); 
 });
 
@@ -170,7 +190,6 @@ function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week'), randomEffect = Math.floor(Math.random() * 3) + 1;
     sDay.style.transition = sWeek.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'; swiper.style.transform = 'none';
-
     if (randomEffect === 1) {
         if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) rotateY(0deg)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(100%,0,-300px) rotateY(90deg)'; sWeek.style.opacity = '0'; }
         else { sDay.style.transform = 'translate3d(-100%,0,-300px) rotateY(-90deg)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0) rotateY(0deg)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
@@ -207,5 +226,52 @@ window.addEventListener('deviceorientation', e => {
     document.querySelectorAll('.gyro-tilt').forEach(el => el.style.transform = `rotateY(${x / 2}deg) rotateX(${-y / 2}deg) translateZ(15px)`);
 });
 
+function updateLogic() {
+    const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes();
+    if (Date.now() - lastHeartbeat > 120000) document.getElementById('outdated-badge').classList.add('show'); lastHeartbeat = Date.now();
+    let isWeekend = (day === 0 || day === 6), targetDay = day;
+    if (!isWeekend && daysData[day]) {
+        const lastLessonNum = Math.max(...Object.keys(daysData[day].lessons).map(Number));
+        if (currentMinutes > parseTime(timeTable[lastLessonNum - 1].end)) { targetDay = day + 1; if (targetDay > 5) targetDay = 1; }
+    } else if (isWeekend) { targetDay = 1; }
+    const isDisplayingToday = (targetDay === day); const activeDayInfo = daysData[targetDay];
+    document.getElementById('day-title').innerText = isDisplayingToday ? `Сегодня (${activeDayInfo.name})` : `Расписание на завтра (${activeDayInfo.name})`;
+    const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
+    let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!";
+    const tCard = document.getElementById('main-timer-card'); tCard.className = "timer-card gyro-tilt";
+    
+    if (isDisplayingToday && daysData[day]) {
+        const todayLessons = daysData[day].lessons, firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number)), firstLessonStart = parseTime(timeTable[firstLessonNum - 1].start);
+        if (currentMinutes < firstLessonStart) {
+            currentStatusText = "До начала уроков"; let diff = firstLessonStart - currentMinutes; 
+            timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)} ч. ${diff % 60} мин.` : `${diff} мин.`;
+            subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
+        } else {
+            for (let lNum of Object.keys(todayLessons).map(Number)) {
+                let tBox = timeTable[lNum - 1]; if (currentMinutes >= parseTime(tBox.start) && currentMinutes <= parseTime(tBox.end)) { activeLessonId = lNum; currentStatusText = `Идет ${lNum}-й урок`; timeDiffText = `${parseTime(tBox.end) - currentMinutes} мин.`; subText = `До конца урока: ${todayLessons[lNum]}`; break; }
+            }
+            if (!activeLessonId) {
+                const lessonsKeys = Object.keys(todayLessons).map(Number).sort();
+                for (let i = 0; i < lessonsKeys.length - 1; i++) {
+                    let currEnd = parseTime(timeTable[lessonsKeys[i] - 1].end), nextStart = parseTime(timeTable[lessonsKeys[i+1] - 1].start);
+                    if (currentMinutes > currEnd && currentMinutes < nextStart) {
+                        let diff = nextStart - currentMinutes; currentStatusText = "Идет перемена"; timeDiffText = `${diff} мин.`; subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
+                        if (diff <= 2) tCard.classList.add('break-warning'); else tCard.classList.add('break-active'); break;
+                    }
+                }
+            }
+        }
+    } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий weekend: ${activeDayInfo.name}`; }
+    document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
+    
+    for (let slot = 1; slot <= 8; slot++) {
+        const name = activeDayInfo.lessons[slot]; if (!name) continue;
+        const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
+        const currentSlotTime = timeTable.find(t => t.num === slot);
+        row.innerHTML = `<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
+        listContainer.appendChild(row);
+    }
+}
+
 function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
-buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); renderLoop();
+buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
