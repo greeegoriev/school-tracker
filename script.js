@@ -60,6 +60,7 @@ function renderLoop() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
     ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
     
     if (mouse.active && mouse.targetX !== null) {
@@ -79,7 +80,9 @@ function renderLoop() {
         
         ctx.save();
         let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
-        radialGrad.addColorStop(0, blob.color + (isDark ? '99' : 'bb')); radialGrad.addColorStop(0.3, blob.color + '22'); radialGrad.addColorStop(1, 'transparent');
+        radialGrad.addColorStop(0, blob.color + (isDark ? '99' : 'bb')); 
+        radialGrad.addColorStop(0.3, blob.color + '22'); 
+        radialGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
     requestAnimationFrame(renderLoop);
@@ -87,8 +90,8 @@ function renderLoop() {
 
 function updateMousePos(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const clientX = e.touches ? e.touches.clientX : e.clientX; 
+    const clientY = e.touches ? e.touches.clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width);
     mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
@@ -117,7 +120,6 @@ window.addEventListener('touchmove', e => {
         pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
     }
 }, { passive: false });
-
 window.addEventListener('touchend', () => {
     isDragging = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
     if (dragDirection === 'horizontal') {
@@ -195,8 +197,8 @@ function updateLogic() {
         const todayLessons = daysData[day].lessons, firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number)), firstLessonStart = parseTime(timeTable[firstLessonNum - 1].start);
         if (currentMinutes < firstLessonStart) {
             currentStatusText = "До начала уроков"; let diff = firstLessonStart - currentMinutes; 
-            // ИСПРАВЛЕНО: Умный вывод без 0 часов + точки в сокращениях (ч. и мин.)
-            timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)}ч. ${diff % 60}мин.` : `${diff}мин.`;
+            // ИСПРАВЛЕНО: Добавлены неразрывные пробелы перед "ч." и "мин."
+            timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)} ч. ${diff % 60} мин.` : `${diff} мин.`;
             subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
         } else {
             for (let lNum of Object.keys(todayLessons).map(Number)) {
