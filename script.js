@@ -17,6 +17,9 @@ const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getConte
 const swiper = document.getElementById('swiper'); const pullIndicator = document.getElementById('pull-indicator'); const pullSvg = document.getElementById('pull-svg');
 let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0, dragDirection = null, lastHeartbeat = Date.now(), touchX = null, touchY = null, activePalette = null;
 
+// Плавные координаты-цели для интерполяции (убирает дерганье)
+let targetTouchX = null, targetTouchY = null, currentTouchX = null, currentTouchY = null;
+
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 
 function generateFluidBackground() {
@@ -26,27 +29,51 @@ function generateFluidBackground() {
     
     if (!activePalette) { activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)]; }
     
-    const currentAccentColor = activePalette.colors[1]; 
+    const currentAccentColor = activePalette.colors; 
     document.documentElement.style.setProperty('--accent', currentAccentColor);
     document.documentElement.style.setProperty('--neon-glow', currentAccentColor + (isDark ? '66' : '33'));
     
     ctx.fillStyle = activePalette.base; ctx.fillRect(0, 0, canvas.width, canvas.height);
     let positions = [{ x: 0, y: 0 }, { x: canvas.width, y: 0 }, { x: 0, y: canvas.height }, { x: canvas.width, y: canvas.height }];
     
-    // Интерактивный шлейф: плавно подмешиваем текущие координаты пальца/мыши в Mesh-карту
-    if (touchX !== null && touchY !== null) { positions.push({ x: touchX * 1.2, y: touchY * 1.2, isTouch: true }); }
+    // Плавное следование за координатами пальца (интерполяция)
+    if (currentTouchX !== null && currentTouchY !== null) {
+        positions.push({ x: currentTouchX * 1.2, y: currentTouchY * 1.2, isTouch: true });
+    }
     
     positions.forEach((pos, index) => {
         ctx.save(); let targetX = pos.x, targetY = pos.y;
-        if (!pos.isTouch) { targetX += Math.sin(index + Date.now() * 0.0005) * 50; targetY += Math.cos(index + Date.now() * 0.0005) * 50; }
-        let radius = pos.isTouch ? canvas.width * 0.6 : Math.random() * (canvas.width * 0.6) + canvas.width * 0.4;
+        if (!pos.isTouch) { 
+            targetX += Math.sin(index + Date.now() * 0.0005) * 50; 
+            targetY += Math.cos(index + Date.now() * 0.0005) * 50; 
+        }
+        let radius = pos.isTouch ? canvas.width * 0.6 : Math.random() * (canvas.width * 0.4) + canvas.width * 0.4;
         let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
         let color = activePalette.colors[index % activePalette.colors.length];
         
-        radialGrad.addColorStop(0, color + (isDark ? '88' : 'ff')); radialGrad.addColorStop(0.5, color + (isDark ? '22' : '44')); radialGrad.addColorStop(1, 'transparent');
+        radialGrad.addColorStop(0, color + (isDark ? '88' : 'ff')); 
+        radialGrad.addColorStop(0.5, color + (isDark ? '11' : '33')); 
+        radialGrad.addColorStop(1, 'transparent');
+        
         ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply'; ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
 }
+// Анимационный цикл рендеринга (гарантирует стабильные 60 FPS без мерцания)
+function renderLoop() {
+    if (targetTouchX !== null && targetTouchY !== null) {
+        if (currentTouchX === null) { currentTouchX = targetTouchX; currentTouchY = targetTouchY; }
+        // Формула плавного инерционного подплывания сферы к пальцу
+        currentTouchX += (targetTouchX - currentTouchX) * 0.1;
+        currentTouchY += (targetTouchY - currentTouchY) * 0.1;
+    } else {
+        currentTouchX = currentTouchX + (null - currentTouchX) * 0.1;
+        currentTouchY = currentTouchY + (null - currentTouchY) * 0.1;
+        if (Math.abs(currentTouchX) < 1) currentTouchX = currentTouchY = null;
+    }
+    generateFluidBackground();
+    requestAnimationFrame(renderLoop);
+}
+
 function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week'), randomEffect = Math.floor(Math.random() * 3) + 1;
@@ -68,25 +95,28 @@ function switchScreen(index) {
     const shift = (document.querySelector('.navigation-tabs').offsetWidth - 12) / 2;
     document.getElementById('nav-carriage').style.transform = `translateX(${index * shift}px)`;
     document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
-    generateFluidBackground();
 }
 
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
-    startX = e.touches.clientX; startY = e.touches.clientY; touchX = e.touches.clientX; touchY = e.touches.clientY; isDragging = true; dragDirection = null;
+    const touch = e.touches[0];
+    startX = touch.clientX; startY = touch.clientY;
+    targetTouchX = touch.clientX; targetTouchY = touch.clientY;
+    isDragging = true; dragDirection = null;
 });
 
 window.addEventListener('touchmove', e => {
     if (!isDragging) return;
-    let diffX = e.touches.clientX - startX, diffY = e.touches.clientY - startY;
-    touchX = e.touches.clientX; touchY = e.touches.clientY;
+    const touch = e.touches[0];
+    let diffX = touch.clientX - startX, diffY = touch.clientY - startY;
+    
+    targetTouchX = touch.clientX; targetTouchY = touch.clientY;
     
     if (!dragDirection) {
-        if (Math.abs(diffX) > Math.abs(diffY) + 5) dragDirection = 'horizontal';
-        else if (diffY > 5 && currentIdx === 0) dragDirection = 'pull';
+        if (Math.abs(diffX) > Math.abs(diffY) + 10) dragDirection = 'horizontal';
+        else if (diffY > 10 && currentIdx === 0) dragDirection = 'pull';
     }
     
-    // ИСПРАВЛЕНО: Жёсткое сравнение (===) вместо присваивания (=) возвращает нативный свайп
     if (dragDirection === 'horizontal') {
         currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`;
     } else if (dragDirection === 'pull') {
@@ -94,7 +124,6 @@ window.addEventListener('touchmove', e => {
         pullIndicator.style.transform = `translate3d(-50%, ${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1);
         pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
     }
-    generateFluidBackground(); // Перерисовываем Canvas в реальном времени при ведении пальца
 });
 window.addEventListener('touchend', () => {
     if (!isDragging) return; isDragging = false;
@@ -107,14 +136,12 @@ window.addEventListener('touchend', () => {
         if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); }
         else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; }
     }
-    touchX = touchY = null; generateFluidBackground();
+    targetTouchX = targetTouchY = null;
 });
 
-// ИСПРАВЛЕНО: Принудительный сброс activePalette=null гарантирует смену гаммы на КАЖДЫЙ одиночный тап
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
     activePalette = null; 
-    generateFluidBackground(); 
 });
 
 function buildMatrix() {
@@ -185,5 +212,4 @@ function updateLogic() {
     }
 }
 
-function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); }
-buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas);
+buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
