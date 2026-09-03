@@ -60,8 +60,9 @@ function initBlobs() {
 function renderLoop() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = activePalette.base + (isDark ? '1a' : '22'); ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+    ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); // Оптимальная вязкость шлейфа
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
     
     if (mouse.active && mouse.targetX !== null) {
@@ -118,6 +119,7 @@ window.addEventListener('touchmove', e => {
         pullIndicator.style.transform = `translate3d(-50%, ${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1);
         pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
     }
+    if (mouse.active) updateMousePos(e);
 });
 
 window.addEventListener('touchend', () => {
@@ -135,8 +137,11 @@ window.addEventListener('touchend', () => {
 
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
+    activePalette = null; // Полностью сбрасываем старую палитру
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищаем холст под новый цвет
     selectRandomPalette(); 
 });
+
 
 function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
