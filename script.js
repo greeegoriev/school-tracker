@@ -1,10 +1,7 @@
-// Текущий активный профиль: 0 - Кирилл, 1 - Женя
 let currentUser = 0;
-
 const darkPalettes = [{ base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
 const lightPalettes = [{ base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] }, { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] }, { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }];
 
-// Внедрен урок №0 на Понедельник (08:00 - 08:25)
 const timeTable = [
     { num: 0, start: "08:00", end: "08:25" },
     { num: 1, start: "08:30", end: "09:10" }, { num: 2, start: "09:20", end: "10:00" },
@@ -13,7 +10,6 @@ const timeTable = [
     { num: 7, start: "14:00", end: "14:40" }, { num: 8, start: "14:50", end: "15:30" }
 ];
 
-// Массив двух баз данных: Индекс [0] - Кирилл, Индекс [1] - Женя
 const schedules = [
     {
         1: { name: "Понедельник", short: "Пн", lessons: { 0: "Разговоры о важном", 1: "Физика", 2: "Литература", 3: "История", 4: "Алгебра", 5: "Вероятность", 6: "Физкультура", 7: "Информатика" }, rooms: {0:"301", 1:"301", 2:"308", 3:"210", 4:"313", 5:"313", 6:"Спортзал", 7:"301"} },
@@ -44,7 +40,7 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    const soloColor = activePalette.colors;
+    const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -89,7 +85,7 @@ function renderLoop() {
 }
 
 function updateMousePos(e) {
-    const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches.clientX : e.clientX; const clientY = e.touches ? e.touches.clientY : e.clientY;
+    const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 window.addEventListener('touchstart', e => { 
@@ -97,17 +93,17 @@ window.addEventListener('touchstart', e => {
     if (e.touches.length === 2 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
         let rect = grid.getBoundingClientRect();
-        let midX = ((e.touches.clientX + e.touches.clientX) / 2) - rect.left;
-        let midY = ((e.touches.clientY + e.touches.clientY) / 2) - rect.top;
+        let midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+        let midY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
         grid.style.transformOrigin = `${midX}px ${midY}px`;
-        startHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
+        startHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         return;
     }
     if (e.touches.length === 1) {
         if (e.target.closest('.week-matrix-box') && matrixScale > 1.05) {
-            isPanning = true; isDragging = false; startPanX = e.touches.clientX - panX; startPanY = e.touches.clientY - panY; return;
+            isPanning = true; isDragging = false; startPanX = e.touches[0].clientX - panX; startPanY = e.touches[0].clientY - panY; return;
         }
-        isDragging = true; dragDirection = null; startX = e.touches.clientX; startY = e.touches.clientY;
+        isDragging = true; dragDirection = null; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
         if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box') && !e.target.closest('.switch-name-link')) { mouse.active = true; updateMousePos(e); }
     }
 });
@@ -115,19 +111,19 @@ window.addEventListener('touchstart', e => {
 window.addEventListener('touchmove', e => {
     if (isZuming && e.touches.length === 2) {
         e.preventDefault();
-        let currentHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
+        let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         let factor = currentHypot / (startHypot || 1); matrixScale = Math.min(Math.max(matrixScale * factor, 1.0), 2.5); 
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; startHypot = currentHypot; return;
     }
     if (isPanning && e.touches.length === 1 && matrixScale > 1.05) {
-        e.preventDefault(); panX = e.touches.clientX - startPanX; panY = e.touches.clientY - startPanY;
+        e.preventDefault(); panX = e.touches[0].clientX - startPanX; panY = e.touches[0].clientY - startPanY;
         const box = document.querySelector('.week-matrix-box'); let maxPanX = (matrixScale - 1) * box.offsetWidth * 0.4; let maxPanY = (matrixScale - 1) * box.offsetHeight * 0.5;
         panX = Math.min(Math.max(panX, -maxPanX - 100), maxPanX + 50); panY = Math.min(Math.max(panY, -maxPanY - 120), 20);
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; return;
     }
     if (!isDragging || e.touches.length > 1) return;
     if (currentIdx === 1 && matrixScale > 1.05) return;
-    let diffX = e.touches.clientX - startX, diffY = e.touches.clientY - startY; if (mouse.active) updateMousePos(e);
+    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY; if (mouse.active) updateMousePos(e);
     if (!dragDirection) { if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal'; else if (diffY > 15 && currentIdx === 0) dragDirection = 'pull'; }
     if (dragDirection === 'horizontal') { currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`; }
     else if (dragDirection === 'pull') { e.preventDefault(); let pullDistance = Math.min(diffY * 0.4, 90); pullIndicator.style.transform = `translate3d(-50%,${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1); pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`; }
@@ -138,17 +134,14 @@ window.addEventListener('touchend', () => {
     if (dragDirection === 'horizontal') { let movedBy = currentTranslate - prevTranslate; if (movedBy < -100 && currentIdx < 1) currentIdx++; if (movedBy > 100 && currentIdx > 0) currentIdx--; switchScreen(currentIdx); }
     else if (dragDirection === 'pull') { let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g,'')) || 0; pullIndicator.style.transition = 'all 0.3s ease'; if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); } else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; } }
 });
-// 🌟 ИНТЕРАКТИВНЫЙ ПЕРЕКЛЮЧАТЕЛЬ БРАТЬЕВ ПО ТАПУ НА ИМЯ В ЗАГОЛОВКЕ
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
-    
     let nameLink = e.target.closest('.switch-name-link');
     if (nameLink) {
-        currentUser = currentUser === 0 ? 1 : 0; // Меняем индекс
-        nameLink.innerText = currentUser === 0 ? "Кирилла" : "Жени"; // Меняем текст ссылки
+        currentUser = currentUser === 0 ? 1 : 0;
+        nameLink.innerText = currentUser === 0 ? "Кирилла" : "Жени";
         buildMatrix(); updateLogic(); return;
     }
-    
     if (e.target.closest('.week-matrix-box')) {
         let currentTime = Date.now(); let tapLength = currentTime - lastTapTime;
         if (tapLength < 300 && tapLength > 0) { matrixScale = 1; panX = 0; panY = 0; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; grid.style.transform = 'translate3d(0, 0, 0) scale(1)'; e.preventDefault(); return; }
@@ -178,10 +171,10 @@ function switchScreen(index) {
 
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
-    let currentData = schedules[currentUser]; // Подтягиваем активную базу данных
+    let currentData = schedules[currentUser];
     let corner = document.createElement('div'); corner.className = 'matrix-cell header'; corner.innerText = '№'; grid.appendChild(corner);
     for (let d = 1; d <= 5; d++) { let cell = document.createElement('div'); cell.className = 'matrix-cell header'; cell.innerText = currentData[d].short; grid.appendChild(cell); }
-    for (let l = 0; l <= 8; l++) { // Ряды матрицы теперь стартуют с 0 урока
+    for (let l = 0; l <= 8; l++) {
         let numCell = document.createElement('div'); numCell.className = 'matrix-cell num-col'; numCell.innerText = l; grid.appendChild(numCell);
         for (let d = 1; d <= 5; d++) {
             let cell = document.createElement('div'); const name = currentData[d].lessons[l]; cell.className = name ? 'matrix-cell' : 'matrix-cell empty';
@@ -235,7 +228,7 @@ function updateLogic() {
     } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий день: ${activeDayInfo.name}`; }
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
     
-    for (let slot = 0; slot <= 8; slot++) { // Рендерим плашки уроков от 0 до 8
+    for (let slot = 0; slot <= 8; slot++) {
         const name = activeDayInfo.lessons[slot]; if (!name) continue;
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
@@ -245,11 +238,9 @@ function updateLogic() {
             let widthPercent = (lessonProgressPercent * 100).toFixed(1);
             progressHTML = `<div class="lesson-progress-fill" style="width: ${widthPercent}%"></div>`;
         }
-        // 🔄 ИСПРАВЛЕНО: Рендерим кабинет только в том случае, если он физически присутствует в базе (для Кирилла)
         if (activeDayInfo.rooms && activeDayInfo.rooms[slot]) {
             roomHTML = `<div>каб. ${activeDayInfo.rooms[slot]}</div>`;
         }
-        
         row.innerHTML = `${progressHTML}<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta">${roomHTML}<div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
         listContainer.appendChild(row);
     }
