@@ -1,5 +1,5 @@
 let currentUser = 0;
-const darkPalettes = [
+const allPalettes = [
     { base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
     { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
     { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] },
@@ -8,9 +8,7 @@ const darkPalettes = [
     { base: '#06010a', colors: ['#b92b27', '#1565c0', '#7000ff', '#ff007f'] },
     { base: '#030303', colors: ['#ea00d9', '#711c91', '#0abdc6', '#091833'] },
     { base: '#05020c', colors: ['#fe5f75', '#fc9842', '#ff0055', '#7a00ff'] },
-    { base: '#010604', colors: ['#00ffcc', '#38ef7d', '#11998e', '#00f6ff'] }
-];
-const lightPalettes = [
+    { base: '#010604', colors: ['#00ffcc', '#38ef7d', '#11998e', '#00f6ff'] },
     { base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] },
     { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] },
     { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] },
@@ -43,26 +41,17 @@ const schedules = [
 const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
 const swiper = document.getElementById('swiper'); const pullIndicator = document.getElementById('pull-indicator'); const pullSvg = document.getElementById('pull-svg');
 let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0, dragDirection = null, lastHeartbeat = Date.now(), activePalette = null;
-
-let blobs = []; let mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
-let matrixScale = 1, startHypot = 0, isZuming = false, lastTapTime = 0;
-let panX = 0, panY = 0, startPanX = 0, startPanY = 0, isPanning = false;
-
-let gyroX = 0, gyroY = 0;
-
+let blobs = [], mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
+let matrixScale = 1, startHypot = 0, isZuming = false, lastTapTime = 0, panX = 0, panY = 0, startPanX = 0, startPanY = 0, isPanning = false, gyroX = 0, gyroY = 0;
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
-
 function selectRandomPalette() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const pool = isDark ? darkPalettes : lightPalettes;
-    activePalette = pool[Math.floor(Math.random() * pool.length)];
-    const soloColor = activePalette.colors[0]; // ГАРАНТИРОВАННЫЙ ИНДЕКС ДЛЯ ПОДСВЕТКИ ДЕНЬ/НЕДЕЛЯ
+    activePalette = allPalettes[Math.floor(Math.random() * allPalettes.length)];
+    const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
-    document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
+    document.documentElement.style.setProperty('--neon-glow', soloColor + '66');
     initBlobs();
 }
-
 function initBlobs() {
     blobs = [];
     for (let i = 0; i < 5; i++) {
@@ -76,40 +65,32 @@ function initBlobs() {
 }
 function renderLoop() {
     if (!activePalette) selectRandomPalette();
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
-    
+    ctx.fillStyle = activePalette.base + '25'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'screen';
     blobs.forEach((blob) => {
         blob.x += blob.vx; blob.y += blob.vy;
         if (blob.x < -100 || blob.x > canvas.width + 100) blob.vx *= -1;
         if (blob.y < -100 || blob.y > canvas.height + 100) blob.vy *= -1;
         ctx.save(); let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
-        radialGrad.addColorStop(0, blob.color + (isDark ? '99' : 'bb')); radialGrad.addColorStop(0.3, blob.color + '22'); radialGrad.addColorStop(1, 'transparent');
+        radialGrad.addColorStop(0, blob.color + '99'); radialGrad.addColorStop(0.3, blob.color + '22'); radialGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
     requestAnimationFrame(renderLoop);
 }
-
 function updateMousePos(e) {
     const rect = canvas.getBoundingClientRect(); const clientX = e.touches.length ? e.touches[0].clientX : e.clientX; const clientY = e.touches.length ? e.touches[0].clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
-
 window.addEventListener('deviceorientation', e => {
     if (!e.gamma || !e.beta) return;
-    gyroY = Math.min(Math.max(e.gamma / 1.5, -15), 15);
-    gyroX = Math.min(Math.max((e.beta - 50) / 1.5, -15), 15);
-    
+    gyroY = Math.min(Math.max(e.gamma / 1.5, -15), 15); gyroX = Math.min(Math.max((e.beta - 50) / 1.5, -15), 15);
     document.querySelectorAll('.timer-card, .day-schedule-box, .week-matrix-box').forEach(card => {
         card.style.transform = `rotateX(${gyroX}deg) rotateY(${gyroY}deg) translateZ(10px)`;
     });
 });
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
-
-    // 🛠️ ФИКС: Корректное считывание мультитача e.touches[0] и e.touches[1] для Pinch-to-Zoom недели
     if (e.touches.length === 2 && currentIdx === 1 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
         let rect = grid.getBoundingClientRect();
@@ -203,16 +184,14 @@ function updateLogic() {
     const isDisplayingToday = (targetDay === day), activeDayInfo = currentData[targetDay];
     document.getElementById('day-title').innerText = isDisplayingToday ? `Сегодня (${activeDayInfo.name})` : `Расписание на завтра (${activeDayInfo.name})`;
     const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
-    
     let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!", lessonProgressPercent = 0, currentBreakTimePassed = 0, currentBreakTotal = 1;
-    
     if (isDisplayingToday && currentData[day]) {
         const todayLessons = currentData[day].lessons, firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number)), firstLessonStart = parseTime(timeTable.find(t=>t.num===firstLessonNum).start);
         if (currentMinutes < firstLessonStart) {
             let totalSecsDiff = (firstLessonStart * 60) - (currentMinutes * 60 + currentSecs);
             currentStatusText = "До начала уроков"; 
             if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
-            else { let diff = firstLessonStart - currentMinutes; timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)} ч. ${diff % 60} мин.` : `${diff} мин.`; }
+            else { let diff = firstLessonStart - currentMinutes; timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)} ч. ${diff % 60} min.` : `${diff} мин.`; }
             subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
         } else {
             for (let lNum of Object.keys(todayLessons).map(Number)) {
@@ -239,13 +218,8 @@ function updateLogic() {
                 }
             }
         }
-    } else { 
-        currentStatusText = "Уроки завершены"; 
-        timeDiffText = `<div class="cyber-rest-box"><div class="cyber-rest-status">ОТДЫХ</div></div>`; 
-        subText = `Следующий день: ${activeDayInfo.name}`; 
-    }
+    } else { currentStatusText = "Уроки завершены"; timeDiffText = `<div class="cyber-rest-box"><div class="cyber-rest-status">ОТДЫХ</div></div>`; subText = `Следующий день: ${activeDayInfo.name}`; }
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerHTML = timeDiffText; document.getElementById('timer-sub').innerText = subText;
-    
     const activeLessonsKeys = Object.keys(activeDayInfo.lessons).map(Number).sort((a,b)=>a-b);
     for (let idx = 0; idx < activeLessonsKeys.length; idx++) {
         const slot = activeLessonsKeys[idx]; const name = activeDayInfo.lessons[slot];
