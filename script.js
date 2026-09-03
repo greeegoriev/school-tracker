@@ -20,23 +20,33 @@ let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging 
 let blobs = [];
 let mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
 
-// Переменные для полностью ручного Pinch-to-Zoom матрицы недельного расписания
 let matrixScale = 1, startHypot = 0, isZuming = false;
 
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
+
+const darkPalettes = [
+    { base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
+    { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
+    { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }
+];
+const lightPalettes = [
+    { base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] },
+    { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] },
+    { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }
+];
 
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    const soloColor = activePalette.colors;
+    
+    // ИСПРАВЛЕНО: Берем строго первый строковый цвет [0] для правильной покраски плашек CSS
+    const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
 }
-const darkPalettes = [{ base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
-const lightPalettes = [{ base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] }, { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] }, { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }];
 function initBlobs() {
     blobs = [];
     for (let i = 0; i < 5; i++) {
@@ -54,19 +64,24 @@ function renderLoop() {
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
+    
     if (mouse.active && mouse.targetX !== null) {
         if (mouse.x === null) { mouse.x = mouse.targetX; mouse.y = mouse.targetY; }
         mouse.x += (mouse.targetX - mouse.x) * 0.08; mouse.y += (mouse.targetY - mouse.y) * 0.08;
     }
+
     blobs.forEach((blob) => {
         blob.x += blob.vx; blob.y += blob.vy;
         if (blob.x < -100 || blob.x > canvas.width + 100) blob.vx *= -1;
         if (blob.y < -100 || blob.y > canvas.height + 100) blob.vy *= -1;
+        
         if (mouse.active && mouse.x !== null) {
             let dx = mouse.x - blob.x; let dy = mouse.y - blob.y; let dist = Math.sqrt(dx*dx + dy*dy);
             if (dist < canvas.width * 0.6) { blob.x += (dx / dist) * 0.8; blob.y += (dy / dist) * 0.8; }
         }
-        ctx.save(); let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
+        
+        ctx.save();
+        let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
         radialGrad.addColorStop(0, blob.color + (isDark ? '99' : 'bb')); radialGrad.addColorStop(0.3, blob.color + '22'); radialGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
@@ -74,38 +89,41 @@ function renderLoop() {
 }
 
 function updateMousePos(e) {
-    const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches.clientX : e.clientX; const clientY = e.touches ? e.touches.clientY : e.clientY;
-    mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width);
+    mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
     
-    // ДЕТЕКТОР ДВУХ ПАЛЬЦЕВ (Включаем ручной Pinch-zoom матрицы недели)
+    // ИСПРАВЛЕНО: Точные индексы [0] и [1] для активации ручного Pinch-Zoom на второй вкладке
     if (e.touches.length === 2 && e.target.closest('.week-matrix-box')) {
-        isZuming = true; isDragging = false;
-        startHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
+        isZuming = true; isDragging = false; mouse.active = false;
+        startHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         return;
     }
     
-    isDragging = true; dragDirection = null; const touch = e.touches; startX = touch.clientX; startY = touch.clientY;
-    if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box')) { mouse.active = true; updateMousePos(e); }
+    isDragging = true; dragDirection = null; const touch = e.touches[0]; startX = touch.clientX; startY = touch.clientY;
+    if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box') && e.touches.length === 1) { mouse.active = true; updateMousePos(e); }
 });
 
 window.addEventListener('touchmove', e => {
-    // ДИНАМИЧЕСКИЙ МАСШТАБ СЕТКИ НЕДЕЛИ: Изменяем размер матрицы в реальном времени при разведении пальцев
+    // ИСПРАВЛЕНО: Масштабирование матрицы недели вычислениями расстояния между двумя пальцами
     if (isZuming && e.touches.length === 2) {
         e.preventDefault();
-        let currentHypot = Math.hypot(e.touches.clientX - e.touches.clientX, e.touches.clientY - e.touches.clientY);
-        let ratio = currentHypot / (startHypot || 1);
-        matrixScale = Math.min(Math.max(matrixScale * ratio, 0.8), 2.5); // Системные рамки зума: от 80% до 250%
+        let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        let factor = currentHypot / (startHypot || 1);
+        matrixScale = Math.min(Math.max(matrixScale * factor, 0.7), 2.5); 
         document.getElementById('matrix-grid').style.transform = `scale(${matrixScale})`;
         startHypot = currentHypot;
         return;
     }
 
-    if (!isDragging) return;
-    const touch = e.touches; let diffX = touch.clientX - startX; let diffY = touch.clientY - startY;
+    if (!isDragging || e.touches.length > 1) return;
+    const touch = e.touches[0]; let diffX = touch.clientX - startX; let diffY = touch.clientY - startY;
     if (mouse.active) updateMousePos(e);
     
     if (!dragDirection) {
@@ -143,6 +161,7 @@ function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week'), randomEffect = Math.floor(Math.random() * 3) + 1;
     sDay.style.transition = sWeek.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'; swiper.style.transform = 'none';
+
     if (randomEffect === 1) {
         if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) rotateY(0deg)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(100%,0,-300px) rotateY(90deg)'; sWeek.style.opacity = '0'; }
         else { sDay.style.transform = 'translate3d(-100%,0,-300px) rotateY(-90deg)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0) rotateY(0deg)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
@@ -192,6 +211,7 @@ function updateLogic() {
     const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
     let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!";
     const tCard = document.getElementById('main-timer-card'); tCard.className = "timer-card gyro-tilt";
+    
     if (isDisplayingToday && daysData[day]) {
         const todayLessons = daysData[day].lessons, firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number)), firstLessonStart = parseTime(timeTable[firstLessonNum - 1].start);
         if (currentMinutes < firstLessonStart) {
@@ -215,6 +235,7 @@ function updateLogic() {
         }
     } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий день: ${activeDayInfo.name}`; }
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
+    
     for (let slot = 1; slot <= 8; slot++) {
         const name = activeDayInfo.lessons[slot]; if (!name) continue;
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
