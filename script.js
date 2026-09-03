@@ -40,7 +40,7 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    const soloColor = activePalette.colors[0]; // ГАРАНТИРОВАННЫЙ ИНДЕКС ЦВЕТА НАВИГАЦИИ ДЕНЬ/НЕДЕЛЯ
+    const soloColor = activePalette.colors[0]; // СТРОГАЯ ИЗОЛЯЦИЯ ПЕРВОГО ЦВЕТА
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -90,8 +90,6 @@ function updateMousePos(e) {
 
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
-    
-    // 🛠️ ФИКС ЗУМА: Масштабирование щипком разрешено СТРОГО внутри недельной матрицы (currentIdx === 1)
     if (e.touches.length === 2 && currentIdx === 1 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
         let rect = grid.getBoundingClientRect();
@@ -108,9 +106,8 @@ window.addEventListener('touchstart', e => {
         isDragging = true; dragDirection = null; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
         if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box') && !e.target.closest('.switch-name-link')) { mouse.active = true; updateMousePos(e); }
     }
-}, { passive: false });
+});
 window.addEventListener('touchmove', e => {
-    // 🛠️ ФИКС ЗУМА: Точное считывание пальцев [0] и [1] для матрицы
     if (isZuming && e.touches.length === 2 && currentIdx === 1) {
         e.preventDefault();
         let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
@@ -129,7 +126,6 @@ window.addEventListener('touchmove', e => {
     let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY; if (mouse.active) updateMousePos(e);
     if (!dragDirection) {
         if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
-        // 🛠️ ФИКС СВАЙПА ВНИЗ: Исправлено чтение скролла контейнера уроков для запуска Pull-To-Refresh
         else if (diffY > 15 && currentIdx === 0 && document.querySelector('.lessons-list').scrollTop <= 1) dragDirection = 'pull';
     }
     if (dragDirection === 'horizontal') { currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`; }
@@ -183,7 +179,7 @@ window.addEventListener('click', e => {
 });
 
 function updateLogic() {
-    const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes(), currentSecs = now.getSeconds();
     if (Date.now() - lastHeartbeat > 120000) document.getElementById('outdated-badge').classList.add('show'); lastHeartbeat = Date.now();
     let currentData = schedules[currentUser];
     let isWeekend = (day === 0 || day === 6), targetDay = day;
@@ -201,15 +197,21 @@ function updateLogic() {
     if (isDisplayingToday && currentData[day]) {
         const todayLessons = currentData[day].lessons, firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number)), firstLessonStart = parseTime(timeTable.find(t=>t.num===firstLessonNum).start);
         if (currentMinutes < firstLessonStart) {
-            currentStatusText = "До начала уроков"; let diff = firstLessonStart - currentMinutes; 
-            timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)} ч. ${diff % 60} мин.` : `${diff} мин.`;
+            let totalSecsDiff = (firstLessonStart * 60) - (currentMinutes * 60 + currentSecs);
+            currentStatusText = "До начала уроков"; 
+            if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
+            else { let diff = firstLessonStart - currentMinutes; timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)} ч. ${diff % 60} мин.` : `${diff} мин.`; }
             subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
         } else {
             for (let lNum of Object.keys(todayLessons).map(Number)) {
                 let tBox = timeTable.find(t=>t.num===lNum); let startM = parseTime(tBox.start), endM = parseTime(tBox.end);
                 if (currentMinutes >= startM && currentMinutes <= endM) {
-                    activeLessonId = lNum; currentStatusText = `Идет ${lNum === 0 ? '0-й' : lNum + '-й'} урок`; timeDiffText = `${endM - currentMinutes} мин.`; subText = `До конца урока: ${todayLessons[lNum]}`;
-                    lessonProgressPercent = (currentMinutes - startM) / (endM - startM); break;
+                    activeLessonId = lNum; currentStatusText = `Идет ${lNum === 0 ? '0-й' : lNum + '-й'} урок`;
+                    let totalSecsDiff = (endM * 60) - (currentMinutes * 60 + currentSecs);
+                    if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
+                    else { timeDiffText = `${endM - currentMinutes} мин.`; }
+                    subText = `До конца урока: ${todayLessons[lNum]}`;
+                    lessonProgressPercent = (currentMinutes * 60 + currentSecs - startM * 60) / (endM * 60 - startM * 60); break;
                 }
             }
             if (activeLessonId === null) {
@@ -217,15 +219,25 @@ function updateLogic() {
                 for (let i = 0; i < lessonsKeys.length - 1; i++) {
                     let currEnd = parseTime(timeTable.find(t=>t.num===lessonsKeys[i]).end), nextStart = parseTime(timeTable.find(t=>t.num===lessonsKeys[i+1]).start);
                     if (currentMinutes > currEnd && currentMinutes < nextStart) {
-                        let diff = nextStart - currentMinutes; currentStatusText = "До конца перемены"; timeDiffText = `${diff} мин.`; subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
+                        let totalSecsDiff = (nextStart * 60) - (currentMinutes * 60 + currentSecs);
+                        currentStatusText = "До конца перемены";
+                        if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
+                        else { let diff = nextStart - currentMinutes; timeDiffText = `${diff} мин.`; }
+                        subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
                         currentBreakTotal = nextStart - currEnd; currentBreakTimePassed = currentMinutes - currEnd;
-                        if (diff <= 2) tCard.classList.add('break-warning'); else tCard.classList.add('break-active'); break;
+                        if ((nextStart - currentMinutes) <= 2) tCard.classList.add('break-warning'); else tCard.classList.add('break-active'); break;
                     }
                 }
             }
         }
-    } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий день: ${activeDayInfo.name}`; }
-    document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
+    } else { 
+        currentStatusText = "Уроки завершены"; 
+        timeDiffText = `<span class="cyber-rest-status">ОТДЫХ</span>`; // ВСТАВКА КИБЕРПАНК ТЕКСТА
+        subText = `Следующий день: ${activeDayInfo.name}`; 
+    }
+    document.getElementById('timer-label').innerText = currentStatusText; 
+    document.getElementById('timer-time').innerHTML = timeDiffText; 
+    document.getElementById('timer-sub').innerText = subText;
     
     const activeLessonsKeys = Object.keys(activeDayInfo.lessons).map(Number).sort((a,b)=>a-b);
     for (let idx = 0; idx < activeLessonsKeys.length; idx++) {
@@ -243,15 +255,18 @@ function updateLogic() {
                 let breakDuration = parseTime(nextSlotTime.start) - parseTime(currentSlotTime.end);
                 if (breakDuration > 0) {
                     let arcOffset = 88; let isThisBreakNow = (isDisplayingToday && currentMinutes > parseTime(currentSlotTime.end) && currentMinutes < parseTime(nextSlotTime.start));
-                    let currentOffset = isThisBreakNow ? arcOffset - (arcOffset * (currentBreakTimePassed / currentBreakTotal)) : arcOffset;
+                    let currentOffset = isThisBreakNow ? arcOffset - (arcOffset * ((currentBreakTimePassed * 60 + currentSecs) / (currentBreakTotal * 60))) : arcOffset;
                     breakBadgeHTML = `<div class="break-radial-container"><svg class="break-radial-svg" viewBox="0 0 32 32"><circle class="break-radial-bg" cx="16" cy="16" r="14"/><circle class="break-radial-track" cx="16" cy="16" r="14" stroke-dasharray="${arcOffset}" stroke-dashoffset="${currentOffset}"/></svg><span class="break-radial-num">${breakDuration}</span></div>`;
                 }
             }
-        } else { breakBadgeHTML = `<div class="break-radial-spacer"></div>`; }
+        } else { 
+            // ФИКС ВЫРАВНИВАНИЯ: Добавляем блок-распорку для идеальной горизонтальной линии
+            breakBadgeHTML = `<div class="break-radial-spacer"></div>`; 
+        }
         row.innerHTML = `${progressHTML}<div class="lesson-left"><div class="lesson-title-block"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div>${roomHTML}</div><div class="lesson-meta"><div class="lesson-time-row"><span>${currentSlotTime ? currentSlotTime.start : "--:--"}</span>${breakBadgeHTML}</div></div>`;
         listContainer.appendChild(row);
     }
 }
 
 function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
-buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
+buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 1000); window.addEventListener('resize', resizeCanvas); renderLoop();
