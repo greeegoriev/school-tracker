@@ -296,15 +296,15 @@ body, html {
     font-weight: 500;
 }
 
-/* 🔄 ОПТИМИЗАЦИЯ: Разрешаем свободный вертикальный скролл только для карточки «Неделя» */
 .week-matrix-box {
     padding: 10px;
     height: 74vh;
     display: flex;
     flex-direction: column;
     margin-top: 15px;
-    overflow-y: auto;       /* Включаем вертикальную прокрутку */
-    touch-action: pan-y;   /* Разрешаем браузеру обрабатывать потягивания пальцем */
+    overflow: auto;
+    /* ⚡ РАЗРЕШАЕМ МАСШТАБИРОВАНИЕ ДВУМЯ ПАЛЬЦАМИ (pinch-zoom) И СКРОЛЛ */
+    touch-action: pan-x pan-y pinch-zoom; 
 }
 
 .matrix-grid {
@@ -312,8 +312,11 @@ body, html {
     grid-template-columns: 24px repeat(5, 1fr);
     grid-template-rows: auto repeat(8, 1fr);
     gap: 4px;
-    min-height: 520px;     /* Задаем минимальную высоту сетки, чтобы она мягко прокручивалась при нехватке места */
+    min-height: 520px;
+    min-width: 320px;
     width: 100%;
+    /* Гарантирует плавную трансформацию сетки при зуме */
+    transform-origin: top left;
 }
 
 .matrix-cell {
