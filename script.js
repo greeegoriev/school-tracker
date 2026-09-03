@@ -114,6 +114,7 @@ window.addEventListener('touchmove', e => {
     }
     if (!isDragging || e.touches.length > 1) return;
     if (currentIdx === 1 && matrixScale > 1.05) return;
+    
     let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY; if (mouse.active) updateMousePos(e);
     if (!dragDirection) { if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal'; else if (diffY > 15 && currentIdx === 0) dragDirection = 'pull'; }
     if (dragDirection === 'horizontal') { currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`; }
@@ -224,4 +225,5 @@ function updateLogic() {
     }
 }
 
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
 buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
