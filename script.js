@@ -28,19 +28,21 @@ const darkPalettes = [
     { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }
 ];
 const lightPalettes = [
-    { base: '#fffcfd', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] },
-    { base: '#f4f7ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] },
-    { base: '#f9fff7', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }
+    { base: '#ffffff', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] },
+    { base: '#ffffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] },
+    { base: '#ffffff', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] }
 ];
 
-// ГАРАНТИЯ ПОРЯДКА: Вспомогательный парсер времени объявлен первым в коде
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    document.documentElement.style.setProperty('--accent', activePalette.colors);
-    document.documentElement.style.setProperty('--neon-glow', activePalette.colors + (isDark ? '66' : '33'));
+    
+    // ИСПРАВЛЕНО: Извлекаем строго ПЕРВЫЙ цвет строки из массива для плашек навигации
+    const soloColor = activePalette.colors[0];
+    document.documentElement.style.setProperty('--accent', soloColor);
+    document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
 }
 function initBlobs() {
@@ -48,8 +50,8 @@ function initBlobs() {
     for (let i = 0; i < 5; i++) {
         blobs.push({
             x: Math.random() * canvas.width, y: Math.random() * canvas.height,
-            vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2,
-            radius: Math.random() * (canvas.width * 0.3) + canvas.width * 0.2,
+            vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+            radius: Math.random() * (canvas.width * 0.7) + canvas.width * 0.5,
             color: activePalette.colors[i % activePalette.colors.length]
         });
     }
@@ -59,26 +61,29 @@ function renderLoop() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = activePalette.base + (isDark ? '1a' : '22'); ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply';
+    
+    ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
     
     if (mouse.active && mouse.targetX !== null) {
         if (mouse.x === null) { mouse.x = mouse.targetX; mouse.y = mouse.targetY; }
-        mouse.x += (mouse.targetX - mouse.x) * 0.1; mouse.y += (mouse.targetY - mouse.y) * 0.1;
+        mouse.x += (mouse.targetX - mouse.x) * 0.08; mouse.y += (mouse.targetY - mouse.y) * 0.08;
     }
 
     blobs.forEach((blob) => {
         blob.x += blob.vx; blob.y += blob.vy;
-        if (blob.x < 0 || blob.x > canvas.width) blob.vx *= -1;
-        if (blob.y < 0 || blob.y > canvas.height) blob.vy *= -1;
+        if (blob.x < -100 || blob.x > canvas.width + 100) blob.vx *= -1;
+        if (blob.y < -100 || blob.y > canvas.height + 100) blob.vy *= -1;
         
         if (mouse.active && mouse.x !== null) {
             let dx = mouse.x - blob.x; let dy = mouse.y - blob.y; let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < canvas.width * 0.5) { blob.x += (dx / dist) * 1.5; blob.y += (dy / dist) * 1.5; }
+            if (dist < canvas.width * 0.6) { blob.x += (dx / dist) * 0.8; blob.y += (dy / dist) * 0.8; }
         }
         
         ctx.save();
         let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
-        radialGrad.addColorStop(0, blob.color + (isDark ? 'aa' : 'ff')); radialGrad.addColorStop(0.4, blob.color + '33'); radialGrad.addColorStop(1, 'transparent');
+        radialGrad.addColorStop(0, blob.color + (isDark ? '99' : 'bb')); 
+        radialGrad.addColorStop(0.3, blob.color + '22'); 
+        radialGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
     requestAnimationFrame(renderLoop);
@@ -86,7 +91,8 @@ function renderLoop() {
 
 function updateMousePos(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches.clientX : e.clientX; const clientY = e.touches ? e.touches.clientY : e.clientY;
+    const clientX = e.touches ? e.touches.clientX : e.clientX; 
+    const clientY = e.touches ? e.touches.clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width);
     mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
@@ -96,15 +102,14 @@ window.addEventListener('touchstart', e => {
     isDragging = true; dragDirection = null; mouse.active = true; startX = e.touches.clientX; startY = e.touches.clientY;
     updateMousePos(e);
 });
-
 window.addEventListener('touchmove', e => {
     if (!isDragging) return;
     let diffX = e.touches.clientX - startX; let diffY = e.touches.clientY - startY;
     if (mouse.active) updateMousePos(e);
     
     if (!dragDirection) {
-        if (Math.abs(diffX) > Math.abs(diffY) + 10) dragDirection = 'horizontal';
-        else if (diffY > 10 && currentIdx === 0) dragDirection = 'pull';
+        if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
+        else if (diffY > 15 && currentIdx === 0) dragDirection = 'pull';
     }
     if (dragDirection === 'horizontal') {
         currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`;
@@ -114,13 +119,14 @@ window.addEventListener('touchmove', e => {
         pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
     }
 });
+
 window.addEventListener('touchend', () => {
     isDragging = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
     if (dragDirection === 'horizontal') {
         let movedBy = currentTranslate - prevTranslate;
         if (movedBy < -100 && currentIdx < 1) currentIdx++; if (movedBy > 100 && currentIdx > 0) currentIdx--; switchScreen(currentIdx);
     } else if (dragDirection === 'pull') {
-        let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g, '')) || 0;
+        let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g,'')) || 0;
         pullIndicator.style.transition = 'all 0.3s ease';
         if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); }
         else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; }
@@ -219,4 +225,4 @@ function updateLogic() {
 }
 
 function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
-buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
+buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); renderLoop();
