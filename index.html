@@ -4,75 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Расписание Кирилла</title>
-    
-    <!-- Режим standalone-приложения для экрана iQOO Z8 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <!-- Подключение кастомных веб-шрифтов премиум-уровня -->
     <link rel="preconnect" href="https://googleapis.com">
     <link rel="preconnect" href="https://gstatic.com" crossorigin>
-    <link href="https://googleapis.com/css2?family=JetBrains+Mono:wght@800;900&family=Unbounded:wght@500;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Принудительный сброс кэша браузера версией v=6 -->
+    <link href="https://googleapis.com/css2?family=JetBrains+Mono:wght@900&family=Unbounded:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <!-- Слой генеративного интерактивного холста -->
     <canvas id="bg-canvas"></canvas>
-
-    <!-- Трехмерный контейнер карусели страниц -->
+    
     <div class="swiper-container" id="swiper">
-        
-        <!-- СЛАЙД 1: Компактный обзор дня и живой таймер -->
-        <div class="slide">
-            <div class="header-widget gyro-tilt">
-                <h1>Расписание Кирилла</h1>
-            </div>
-
-            <!-- Виджет умного обратного отсчета -->
+        <!-- СЛАЙД 1 -->
+        <div class="slide" id="slide-day">
+            <div class="header-widget gyro-tilt"><h1>Расписание Кирилла</h1></div>
             <div class="timer-card gyro-tilt">
                 <div class="timer-status" id="timer-label">Загрузка...</div>
                 <div class="timer-countdown" id="timer-time">00:00</div>
-                <div class="timer-sub" id="timer-sub">анализ уроков...</div>
+                <div class="timer-sub" id="timer-sub">анализ...</div>
             </div>
-
-            <!-- План на учебный день -->
             <div class="day-schedule-box gyro-tilt">
                 <div class="day-title" id="day-title">Сегодня</div>
                 <div class="lessons-list" id="day-lessons"></div>
             </div>
-
-            <!-- Навигационные табы управления -->
-            <div class="navigation-tabs">
-                <button class="tab-btn active" onclick="switchScreen(0)">День</button>
-                <button class="tab-btn" onclick="switchScreen(1)">Неделя</button>
-            </div>
         </div>
-
-        <!-- СЛАЙД 2: Матрица всей недели на одном экране -->
-        <div class="slide">
-            <div class="header-widget gyro-tilt">
-                <h1>Вся неделя</h1>
-            </div>
-
-            <!-- Bento-сетка недели с адаптивным текстом -->
-            <div class="week-matrix-box gyro-tilt">
-                <div class="matrix-grid" id="matrix-grid"></div>
-            </div>
-
-            <!-- Навигационные табы управления -->
-            <div class="navigation-tabs">
-                <button class="tab-btn" onclick="switchScreen(0)">День</button>
-                <button class="tab-btn active" onclick="switchScreen(1)">Неделя</button>
-            </div>
+        <!-- СЛАЙД 2 -->
+        <div class="slide" id="slide-week">
+            <div class="header-widget gyro-tilt"><h1>Вся неделя</h1></div>
+            <div class="week-matrix-box gyro-tilt"><div class="matrix-grid" id="matrix-grid"></div></div>
         </div>
-
     </div>
 
-    <!-- Управляющий скрипт с защитой от кэширования -->
+    <!-- Неподвижная премиум-панель навигации со скользящей кареткой -->
+    <div class="navigation-tabs">
+        <div class="nav-carriage" id="nav-carriage"></div>
+        <button class="tab-btn active" id="btn-tab-0" onclick="switchScreen(0)">День</button>
+        <button class="tab-btn" id="btn-tab-1" onclick="switchScreen(1)">Неделя</button>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
