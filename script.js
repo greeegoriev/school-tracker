@@ -17,26 +17,28 @@ const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getConte
 const swiper = document.getElementById('swiper'); const pullIndicator = document.getElementById('pull-indicator'); const pullSvg = document.getElementById('pull-svg');
 let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0, dragDirection = null, lastHeartbeat = Date.now(), touchX = null, touchY = null, activePalette = null;
 
-// Плавные координаты-цели для интерполяции (убирает дерганье)
 let targetTouchX = null, targetTouchY = null, currentTouchX = null, currentTouchY = null;
 
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 
-function generateFluidBackground() {
+const darkPalettes = [{ base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
+const lightPalettes = [{ base: '#fff5f7', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] }, { base: '#f0f4ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] }, { base: '#f7fff5', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }];
+
+function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const darkPalettes = [{ base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
-    const lightPalettes = [{ base: '#fff5f7', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] }, { base: '#f0f4ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] }, { base: '#f7fff5', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }];
+    activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
     
-    if (!activePalette) { activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)]; }
-    
-    const currentAccentColor = activePalette.colors; 
-    document.documentElement.style.setProperty('--accent', currentAccentColor);
-    document.documentElement.style.setProperty('--neon-glow', currentAccentColor + (isDark ? '66' : '33'));
+    // ИСПРАВЛЕНО: Меняем CSS-акценты плашек ТОЛЬКО ОДИН РАЗ при тапе/смене экрана, а не в бесконечном цикле
+    document.documentElement.style.setProperty('--accent', activePalette.colors[1]);
+    document.documentElement.style.setProperty('--neon-glow', activePalette.colors[1] + (isDark ? '66' : '33'));
+}
+function generateFluidBackground() {
+    if (!activePalette) selectRandomPalette();
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     
     ctx.fillStyle = activePalette.base; ctx.fillRect(0, 0, canvas.width, canvas.height);
     let positions = [{ x: 0, y: 0 }, { x: canvas.width, y: 0 }, { x: 0, y: canvas.height }, { x: canvas.width, y: canvas.height }];
     
-    // Плавное следование за координатами пальца (интерполяция)
     if (currentTouchX !== null && currentTouchY !== null) {
         positions.push({ x: currentTouchX * 1.2, y: currentTouchY * 1.2, isTouch: true });
     }
@@ -47,7 +49,7 @@ function generateFluidBackground() {
             targetX += Math.sin(index + Date.now() * 0.0005) * 50; 
             targetY += Math.cos(index + Date.now() * 0.0005) * 50; 
         }
-        let radius = pos.isTouch ? canvas.width * 0.6 : Math.random() * (canvas.width * 0.4) + canvas.width * 0.4;
+        let radius = pos.isTouch ? canvas.width * 0.5 : Math.random() * (canvas.width * 0.4) + canvas.width * 0.4;
         let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
         let color = activePalette.colors[index % activePalette.colors.length];
         
@@ -58,58 +60,31 @@ function generateFluidBackground() {
         ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply'; ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
 }
-// Анимационный цикл рендеринга (гарантирует стабильные 60 FPS без мерцания)
+
 function renderLoop() {
     if (targetTouchX !== null && targetTouchY !== null) {
         if (currentTouchX === null) { currentTouchX = targetTouchX; currentTouchY = targetTouchY; }
-        // Формула плавного инерционного подплывания сферы к пальцу
         currentTouchX += (targetTouchX - currentTouchX) * 0.1;
         currentTouchY += (targetTouchY - currentTouchY) * 0.1;
     } else {
-        currentTouchX = currentTouchX + (null - currentTouchX) * 0.1;
-        currentTouchY = currentTouchY + (null - currentTouchY) * 0.1;
-        if (Math.abs(currentTouchX) < 1) currentTouchX = currentTouchY = null;
+        if (currentTouchX !== null) {
+            currentTouchX += (null - currentTouchX) * 0.1; currentTouchY += (null - currentTouchY) * 0.1;
+            if (Math.abs(currentTouchX) < 1) currentTouchX = currentTouchY = null;
+        }
     }
     generateFluidBackground();
     requestAnimationFrame(renderLoop);
 }
 
-function switchScreen(index) {
-    currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
-    const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week'), randomEffect = Math.floor(Math.random() * 3) + 1;
-    
-    sDay.style.transition = sWeek.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
-    swiper.style.transform = 'none';
-
-    if (randomEffect === 1) {
-        if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) rotateY(0deg)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(100%,0,-300px) rotateY(90deg)'; sWeek.style.opacity = '0'; }
-        else { sDay.style.transform = 'translate3d(-100%,0,-300px) rotateY(-90deg)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0) rotateY(0deg)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
-    } else if (randomEffect === 2) {
-        if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) scale(1)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(0,0,0) scale(0.7)'; sWeek.style.opacity = '0'; sWeek.style.filter = 'blur(15px)'; }
-        else { sDay.style.transform = 'translate3d(-100%,0,0) scale(0.7)'; sDay.style.opacity = '0'; sDay.style.filter = 'blur(15px)'; sWeek.style.transform = 'translate3d(-100%,0,0) scale(1)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
-    } else {
-        if (index === 0) { sDay.style.transform = 'translate3d(0,0,0)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(100%,0,0)'; sWeek.style.opacity = '0'; }
-        else { sDay.style.transform = 'translate3d(-100%,0,0)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
-    }
-    
-    const shift = (document.querySelector('.navigation-tabs').offsetWidth - 12) / 2;
-    document.getElementById('nav-carriage').style.transform = `translateX(${index * shift}px)`;
-    document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
-}
-
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
-    const touch = e.touches[0];
-    startX = touch.clientX; startY = touch.clientY;
-    targetTouchX = touch.clientX; targetTouchY = touch.clientY;
-    isDragging = true; dragDirection = null;
+    const touch = e.touches[0]; startX = touch.clientX; startY = touch.clientY;
+    targetTouchX = touch.clientX; targetTouchY = touch.clientY; isDragging = true; dragDirection = null;
 });
 
 window.addEventListener('touchmove', e => {
     if (!isDragging) return;
-    const touch = e.touches[0];
-    let diffX = touch.clientX - startX, diffY = touch.clientY - startY;
-    
+    const touch = e.touches[0]; let diffX = touch.clientX - startX, diffY = touch.clientY - startY;
     targetTouchX = touch.clientX; targetTouchY = touch.clientY;
     
     if (!dragDirection) {
@@ -141,8 +116,31 @@ window.addEventListener('touchend', () => {
 
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
-    activePalette = null; 
+    selectRandomPalette(); 
 });
+
+function switchScreen(index) {
+    currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
+    const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week'), randomEffect = Math.floor(Math.random() * 3) + 1;
+    
+    sDay.style.transition = sWeek.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+    swiper.style.transform = 'none';
+
+    if (randomEffect === 1) {
+        if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) rotateY(0deg)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(100%,0,-300px) rotateY(90deg)'; sWeek.style.opacity = '0'; }
+        else { sDay.style.transform = 'translate3d(-100%,0,-300px) rotateY(-90deg)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0) rotateY(0deg)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
+    } else if (randomEffect === 2) {
+        if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) scale(1)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(0,0,0) scale(0.7)'; sWeek.style.opacity = '0'; sWeek.style.filter = 'blur(15px)'; }
+        else { sDay.style.transform = 'translate3d(-100%,0,0) scale(0.7)'; sDay.style.opacity = '0'; sDay.style.filter = 'blur(15px)'; sWeek.style.transform = 'translate3d(-100%,0,0) scale(1)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
+    } else {
+        if (index === 0) { sDay.style.transform = 'translate3d(0,0,0)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(100%,0,0)'; sWeek.style.opacity = '0'; }
+        else { sDay.style.transform = 'translate3d(-100%,0,0)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
+    }
+    
+    const shift = (document.querySelector('.navigation-tabs').offsetWidth - 12) / 2;
+    document.getElementById('nav-carriage').style.transform = `translateX(${index * shift}px)`;
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
+}
 
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
@@ -212,4 +210,4 @@ function updateLogic() {
     }
 }
 
-buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
+buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
