@@ -57,7 +57,7 @@ function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const pool = isDark ? darkPalettes : lightPalettes;
     activePalette = pool[Math.floor(Math.random() * pool.length)];
-    const soloColor = activePalette.colors[0];
+    const soloColor = activePalette.colors[0]; // ГАРАНТИРОВАННЫЙ ИНДЕКС ЦВЕТА НАВИГАЦИИ ДЕНЬ/НЕДЕЛЯ
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -93,7 +93,7 @@ function renderLoop() {
 }
 
 function updateMousePos(e) {
-    const rect = canvas.getBoundingClientRect(); const clientX = e.touches.length ? e.touches[0].clientX : e.clientX; const clientY = e.touches.length ? e.touches[0].clientY : e.clientY;
+    const rect = canvas.getBoundingClientRect(); const clientX = e.touches.length ? e.touches.clientX : e.clientX; const clientY = e.touches.length ? e.touches.clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
@@ -116,8 +116,7 @@ window.addEventListener('touchstart', e => {
     
     let restTarget = e.target.closest('.cyber-rest-box');
     if (restTarget) { 
-        restIsDragging = true; 
-        const t = e.touches[0]; restStartX = t.clientX; restStartY = t.clientY; 
+        restIsDragging = true; const t = e.touches[0]; restStartX = t.clientX; restStartY = t.clientY; 
         const rb = document.querySelector('.cyber-rest-box'); if(rb) rb.style.transition = 'none';
         return; 
     }
@@ -264,6 +263,7 @@ function updateLogic() {
         timeDiffText = `<div class="cyber-rest-box"><div class="cyber-rest-status">ОТДЫХ</div></div>`; 
         subText = `Следующий день: ${activeDayInfo.name}`; 
     }
+    document.documentElement.style.setProperty('--current-idx', currentIdx);
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerHTML = timeDiffText; document.getElementById('timer-sub').innerText = subText;
     
     const activeLessonsKeys = Object.keys(activeDayInfo.lessons).map(Number).sort((a,b)=>a-b);
@@ -271,18 +271,16 @@ function updateLogic() {
         const slot = activeLessonsKeys[idx]; const name = activeDayInfo.lessons[slot];
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
-        
         let progressHTML = '', roomHTML = '', breakBadgeHTML = '';
         if (activeLessonId === slot) { progressHTML = `<div class="lesson-progress-fill" style="width: ${(lessonProgressPercent * 100).toFixed(1)}%"></div>`; }
         if (activeDayInfo.rooms && activeDayInfo.rooms[slot]) { roomHTML = `<div class="lesson-room-sub">каб. ${activeDayInfo.rooms[slot]}</div>`; }
-        
         if (idx < activeLessonsKeys.length - 1) {
             const nextSlot = activeLessonsKeys[idx + 1]; const nextSlotTime = timeTable.find(t => t.num === nextSlot);
             if (currentSlotTime && nextSlotTime) {
                 let breakDuration = parseTime(nextSlotTime.start) - parseTime(currentSlotTime.end);
                 if (breakDuration > 0) {
                     let arcOffset = 88; let isThisBreakNow = (isDisplayingToday && currentMinutes > parseTime(currentSlotTime.end) && currentMinutes < parseTime(nextSlotTime.start));
-                    let currentOffset = isThisBreakNow ? arcOffset - (arcOffset * ((currentBreakTimePassed * 60 + currentSecs) / (currentBreakTotal * 60))) : arcOffset;
+                    let currentOffset = isThisBreakNow ? arcOffset - (arcOffset * (((currentBreakTimePassed * 60) + currentSecs) / (currentBreakTotal * 60))) : arcOffset;
                     breakBadgeHTML = `<div class="break-radial-container"><svg class="break-radial-svg" viewBox="0 0 32 32"><circle class="break-radial-bg" cx="16" cy="16" r="14"/><circle class="break-radial-track" cx="16" cy="16" r="14" stroke-dasharray="${arcOffset}" stroke-dashoffset="${currentOffset}"/></svg><span class="break-radial-num">${breakDuration}</span></div>`;
                 }
             }
@@ -291,4 +289,4 @@ function updateLogic() {
         listContainer.appendChild(row);
     }
 }
-buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 1000); window.addEventListener('resize', () => { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }); renderLoop();
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 1000); window.addEventListener('resize', resizeCanvas); renderLoop();
