@@ -75,8 +75,8 @@ function renderLoop() {
 
 function updateMousePos(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const clientX = e.touches ? e.touches.clientX : e.clientX; 
+    const clientY = e.touches ? e.touches.clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 window.addEventListener('touchstart', e => { 
@@ -114,7 +114,6 @@ window.addEventListener('touchmove', e => {
     }
     if (!isDragging || e.touches.length > 1) return;
     if (currentIdx === 1 && matrixScale > 1.05) return;
-    
     let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY; if (mouse.active) updateMousePos(e);
     if (!dragDirection) { if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal'; else if (diffY > 15 && currentIdx === 0) dragDirection = 'pull'; }
     if (dragDirection === 'horizontal') { currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`; }
@@ -216,14 +215,17 @@ function updateLogic() {
         const name = activeDayInfo.lessons[slot]; if (!name) continue;
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
-        let progressSVGHTML = '';
+        
+        // ИСПРАВЛЕНО: Генерируем внутреннюю ползущую подложку-плашку вместо контурного SVG-прямоугольника
+        let progressHTML = '';
         if (activeLessonId === slot) {
-            progressSVGHTML = `<svg class="lesson-progress-svg"><defs><linearGradient id="rainbow-grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#ff0055"><animate attributeName="stop-color" values="#ff0055;#00ffcc;#9900ff;#ffaa00;#ff0055" dur="32s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#00ffcc"><animate attributeName="stop-color" values="#00ffcc;#9900ff;#ffaa00;#ff0055;#00ffcc" dur="32s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="1" y="1" width="99%" height="95%" rx="18" class="lesson-progress-rect" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - (lessonProgressPercent * 100)}"/></svg>`;
+            let widthPercent = (lessonProgressPercent * 100).toFixed(1);
+            progressHTML = `<div class="lesson-progress-fill" style="width: ${widthPercent}%"></div>`;
         }
-        row.innerHTML = `${progressSVGHTML}<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
+        
+        row.innerHTML = `${progressHTML}<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
         listContainer.appendChild(row);
     }
 }
 
-function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
 buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
