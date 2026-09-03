@@ -27,13 +27,21 @@ body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Unbounde
 .lessons-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; touch-action: pan-y; }
 .lesson-row { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 18px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden; }
 .lesson-row.active { background: rgba(5, 5, 8, 0.25); border: 1px solid var(--border-glass); border-radius: 18px; transform: scale(1.02) translateZ(15px); box-shadow: 0 10px 30px var(--shadow); }
-.lesson-progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 0; pointer-events: none; background: linear-gradient(90deg, #ff0055, #00ffcc, #9900ff, #ffaa00); background-size: 400% 100%; animation: intenseGradientMovement 32s linear infinite; opacity: 0.65; transition: width 1s linear; }
-@keyframes intenseGradientMovement { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+/* 🔄 ИСПРАВЛЕНО: Прямое заполнение ширины без полос прокрутки и без анимации сдвига бэкграунда */
+.lesson-progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 0; pointer-events: none; background: linear-gradient(90deg, #ff0055, #9900ff, #00ffcc); opacity: 0.6; transition: width 1s linear; }
+
+/* 🌟 КОНТРАСТНЫЕ НЕОНОВЫЕ БЕЙДЖИ ПЕРЕМЕН */
+.break-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 8px; background: rgba(0, 255, 192, 0.12); color: var(--accent); border: 1px solid rgba(0, 255, 192, 0.25); margin-left: 8px; vertical-align: middle; text-shadow: 0 0 6px var(--neon-glow); box-shadow: 0 2px 8px rgba(0,255,192,0.1); }
+[data-theme="light"] .break-badge { background: rgba(255, 0, 85, 0.08); color: var(--accent); border: 1px solid rgba(255, 0, 85, 0.2); }
+
 .lesson-left, .lesson-meta { position: relative; z-index: 2; }
 .lesson-num { font-size: 13px; font-weight: 800; color: var(--text-sub); width: 20px; }
 .lesson-row.active .lesson-num { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
 .lesson-name { font-size: 14px; font-weight: 700; letter-spacing: -0.3px; }
-.lesson-meta { font-size: 12px; color: var(--text-sub); text-align: right; font-weight: 500; }
+.lesson-meta { font-size: 12px; color: var(--text-sub); text-align: right; font-weight: 500; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.lesson-time-row { display: flex; align-items: center; gap: 4px; }
+
 .week-matrix-box { padding: 10px; height: 74vh; display: flex; flex-direction: column; margin-top: 15px; overflow: hidden; touch-action: none; position: relative; }
 .matrix-grid { display: grid; grid-template-columns: 24px repeat(5, 1fr); grid-template-rows: auto repeat(9, 1fr); gap: 4px; min-height: 540px; min-width: 320px; width: 100%; transform-origin: 0 0; will-change: transform; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .matrix-cell { display: flex; align-items: center; justify-content: center; text-align: center; font-size: 8px; font-weight: 700; border-radius: 8px; padding: 2px 1px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.04); line-height: 1.1; word-wrap: break-word; word-break: break-word; overflow: hidden; }
