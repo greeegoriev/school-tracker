@@ -50,6 +50,8 @@ let blobs = []; let mouse = { x: null, y: null, targetX: null, targetY: null, ac
 let matrixScale = 1, startHypot = 0, isZuming = false, lastTapTime = 0;
 let panX = 0, panY = 0, startPanX = 0, startPanY = 0, isPanning = false;
 
+let restRotateX = 0, restRotateY = 0, restIsDragging = false, restStartX = 0, restStartY = 0;
+
 const currentHour = new Date().getHours(); document.documentElement.setAttribute('data-theme', (currentHour < 7 || currentHour >= 19) ? 'dark' : 'light');
 function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
 
@@ -57,7 +59,7 @@ function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const pool = isDark ? darkPalettes : lightPalettes;
     activePalette = pool[Math.floor(Math.random() * pool.length)];
-    const soloColor = activePalette.colors;
+    const soloColor = activePalette.colors[0]; // ИСПРАВЛЕНО: Строго изолированный первый цвет
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -89,10 +91,6 @@ function renderLoop() {
         blob.x += blob.vx; blob.y += blob.vy;
         if (blob.x < -100 || blob.x > canvas.width + 100) blob.vx *= -1;
         if (blob.y < -100 || blob.y > canvas.height + 100) blob.vy *= -1;
-        if (mouse.active && mouse.x !== null) {
-            let dx = mouse.x - blob.x; let dy = mouse.y - blob.y; let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < canvas.width * 0.6) { blob.x += (dx / dist) * 0.8; blob.y += (dy / dist) * 0.8; }
-        }
         ctx.save(); let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
         radialGrad.addColorStop(0, blob.color + (isDark ? '99' : 'bb')); radialGrad.addColorStop(0.3, blob.color + '22'); radialGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
@@ -105,18 +103,29 @@ function updateMousePos(e) {
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
-// 🛠️ ИСПРАВЛЕНО: Полное восстановление 3D параллакса гироскопа телефона
+// 🛠️ ИСПРАВЛЕНО: Полное восстановление гироскопа и запуск ПРОТИВОФАЗНОГО параллакса для «Отдыха»
 window.addEventListener('deviceorientation', e => {
     if (!e.gamma || !e.beta) return;
     let rotateY = Math.min(Math.max(e.gamma / 1.5, -15), 15);
     let rotateX = Math.min(Math.max((e.beta - 50) / 1.5, -15), 15);
+    
     document.querySelectorAll('.timer-card, .day-schedule-box, .week-matrix-box').forEach(card => {
         card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
     });
+    
+    // Противофаза (инверсия углов наклона) для интерактивной плашки «Отдых»
+    const restBox = document.querySelector('.cyber-rest-box');
+    if (restBox && !restIsDragging) {
+        restBox.style.transform = `rotateX(${-rotateX * 1.3}deg) rotateY(${-rotateY * 1.3}deg) rotateZ(-2deg)`;
+    }
 });
-
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
+    
+    // Считывание пальца для вращения плашки Отдыха
+    let restTarget = e.target.closest('.cyber-rest-box');
+    if (restTarget) { restIsDragging = true; restStartX = e.touches[0].clientX; restStartY = e.touches[0].clientY; return; }
+
     if (e.touches.length === 2 && currentIdx === 1 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
         let rect = grid.getBoundingClientRect();
@@ -134,7 +143,15 @@ window.addEventListener('touchstart', e => {
         if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box') && !e.target.closest('.switch-name-link')) { mouse.active = true; updateMousePos(e); }
     }
 });
+
 window.addEventListener('touchmove', e => {
+    if (restIsDragging) {
+        let dx = e.touches[0].clientX - restStartX; let dy = e.touches[0].clientY - restStartY;
+        restRotateY += dx * 0.4; restRotateX -= dy * 0.4;
+        let restBox = document.querySelector('.cyber-rest-box');
+        if (restBox) restBox.style.transform = `rotateX(${restRotateX}deg) rotateY(${restRotateY}deg) scale(1.05)`;
+        restStartX = e.touches[0].clientX; restStartY = e.touches[0].clientY; return;
+    }
     if (isZuming && e.touches.length === 2 && currentIdx === 1) {
         e.preventDefault();
         let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
@@ -143,14 +160,10 @@ window.addEventListener('touchmove', e => {
     }
     if (isPanning && e.touches.length === 1 && matrixScale > 1.05 && currentIdx === 1) {
         e.preventDefault(); panX = e.touches[0].clientX - startPanX; panY = e.touches[0].clientY - startPanY;
-        const box = document.querySelector('.week-matrix-box'); let maxPanX = (matrixScale - 1) * box.offsetWidth * 0.4; let maxPanY = (matrixScale - 1) * box.offsetHeight * 0.5;
-        panX = Math.min(Math.max(panX, -maxPanX - 100), maxPanX + 50); panY = Math.min(Math.max(panY, -maxPanY - 120), 20);
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; return;
     }
     if (!isDragging || e.touches.length > 1) return;
-    if (currentIdx === 1 && matrixScale > 1.05) return;
-    
-    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY; if (mouse.active) updateMousePos(e);
+    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY;
     if (!dragDirection) {
         if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
         else if (diffY > 15 && currentIdx === 0 && document.querySelector('.lessons-list').scrollTop <= 1) dragDirection = 'pull';
@@ -160,7 +173,8 @@ window.addEventListener('touchmove', e => {
 }, { passive: false });
 
 window.addEventListener('touchend', () => {
-    isDragging = false; isZuming = false; isPanning = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
+    if (restIsDragging) { restIsDragging = false; const rb = document.querySelector('.cyber-rest-box'); if (rb) { rb.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'; rb.style.transform = 'rotateX(0deg) rotateY(0deg) rotateZ(-2deg)'; setTimeout(() => { if (rb) rb.style.transition = ''; }, 600); } }
+    isDragging = false; isZuming = false; isPanning = false; mouse.active = false;
     if (dragDirection === 'horizontal') { let movedBy = currentTranslate - prevTranslate; if (movedBy < -80 && currentIdx < 1) currentIdx++; if (movedBy > 80 && currentIdx > 0) currentIdx--; switchScreen(currentIdx); }
     else if (dragDirection === 'pull') { let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g,'')) || 0; pullIndicator.style.transition = 'all 0.3s ease'; if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); } else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; } }
 });
@@ -169,8 +183,8 @@ function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week');
     sDay.style.transition = sWeek.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'; swiper.style.transform = 'none';
-    if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) rotateY(0deg)'; sDay.style.opacity = '1'; sDay.style.filter = 'blur(0px)'; sWeek.style.transform = 'translate3d(100%,0,-300px) rotateY(90deg)'; sWeek.style.opacity = '0'; }
-    else { sDay.style.transform = 'translate3d(-100%,0,-300px) rotateY(-90deg)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0) rotateY(0deg)'; sWeek.style.opacity = '1'; sWeek.style.filter = 'blur(0px)'; }
+    if (index === 0) { sDay.style.transform = 'translate3d(0,0,0) rotateY(0deg)'; sDay.style.opacity = '1'; sWeek.style.transform = 'translate3d(100%,0,-300px) rotateY(90deg)'; sWeek.style.opacity = '0'; }
+    else { sDay.style.transform = 'translate3d(-100%,0,-300px) rotateY(-90deg)'; sDay.style.opacity = '0'; sWeek.style.transform = 'translate3d(-100%,0,0) rotateY(0deg)'; sWeek.style.opacity = '1'; }
     const shift = (document.querySelector('.navigation-tabs').offsetWidth - 12) / 2;
     document.getElementById('nav-carriage').style.transform = `translateX(${index * shift}px)`;
     document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
@@ -191,7 +205,7 @@ function buildMatrix() {
     }
 }
 window.addEventListener('click', e => { 
-    if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
+    if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list') || e.target.closest('.cyber-rest-box')) return; 
     let nameLink = e.target.closest('.switch-name-link');
     if (nameLink) {
         currentUser = currentUser === 0 ? 1 : 0; nameLink.innerText = currentUser === 0 ? "Кирилла" : "Жени";
@@ -258,7 +272,7 @@ function updateLogic() {
         }
     } else { 
         currentStatusText = "Уроки завершены"; 
-        timeDiffText = `<div class="cyber-rest-box"><div class="cyber-rest-line"></div><div class="cyber-rest-status">ОТДЫХ</div><div class="cyber-rest-line"></div></div>`; 
+        timeDiffText = `<div class="cyber-rest-box"><div class="cyber-rest-status">ОТДЫХ</div></div>`; 
         subText = `Следующий день: ${activeDayInfo.name}`; 
     }
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerHTML = timeDiffText; document.getElementById('timer-sub').innerText = subText;
