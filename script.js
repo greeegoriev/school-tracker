@@ -49,7 +49,10 @@ function initBlobs() {
 }
 
 function renderLoop() {
+    // ИСПРАВЛЕНО: Безопасный предохранитель инициализации палитры на старте страницы
+    if (!activePalette) selectRandomPalette();
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
@@ -83,14 +86,17 @@ window.addEventListener('touchstart', e => {
     if(e.target.closest('.navigation-tabs')) return;
     if (e.touches.length === 2 && e.target.closest('.week-matrix-box')) {
         isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
-        let t1 = e.touches[0], t2 = e.touches[1]; let rect = grid.getBoundingClientRect();
-        let midX = ((t1.clientX + t2.clientX) / 2) - rect.left; let midY = ((t1.clientY + t2.clientY) / 2) - rect.top;
-        grid.style.transformOrigin = `${midX}px ${midY}px`; startHypot = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY); return;
-    }
-    if (e.touches.length === 1 && e.target.closest('.week-matrix-box') && matrixScale > 1.05) {
-        isPanning = true; isDragging = false; startPanX = e.touches[0].clientX - panX; startPanY = e.touches[0].clientY - panY; return;
+        let rect = grid.getBoundingClientRect();
+        let midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+        let midY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+        grid.style.transformOrigin = `${midX}px ${midY}px`;
+        startHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        return;
     }
     if (e.touches.length === 1) {
+        if (e.target.closest('.week-matrix-box') && matrixScale > 1.05) {
+            isPanning = true; isDragging = false; startPanX = e.touches[0].clientX - panX; startPanY = e.touches[0].clientY - panY; return;
+        }
         isDragging = true; dragDirection = null; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
         if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box')) { mouse.active = true; updateMousePos(e); }
     }
@@ -98,7 +104,8 @@ window.addEventListener('touchstart', e => {
 
 window.addEventListener('touchmove', e => {
     if (isZuming && e.touches.length === 2) {
-        e.preventDefault(); let t1 = e.touches[0], t2 = e.touches[1]; let currentHypot = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        e.preventDefault();
+        let currentHypot = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         let factor = currentHypot / (startHypot || 1); matrixScale = Math.min(Math.max(matrixScale * factor, 1.0), 2.5); 
         document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; startHypot = currentHypot; return;
     }
@@ -164,13 +171,6 @@ function buildMatrix() {
     }
 }
 
-window.addEventListener('deviceorientation', e => {
-    if (!e.gamma || !e.beta) return;
-    let x = Math.min(Math.max(e.gamma, -30), 30) / 1.5, y = Math.min(Math.max(e.beta - 45, -30), 30) / 1.5;
-    canvas.style.transform = `translate3d(${x * 1.1}px,${y * 1.1}px,0) scale(1.15)`;
-    document.querySelectorAll('.gyro-tilt').forEach(el => el.style.transform = `rotateY(${x / 2}deg) rotateX(${-y / 2}deg) translateZ(15px)`);
-});
-
 function updateLogic() {
     const now = new Date(); let day = now.getDay(), currentMinutes = now.getHours() * 60 + now.getMinutes();
     if (Date.now() - lastHeartbeat > 120000) document.getElementById('outdated-badge').classList.add('show'); lastHeartbeat = Date.now();
@@ -182,7 +182,6 @@ function updateLogic() {
     const isDisplayingToday = (targetDay === day); const activeDayInfo = daysData[targetDay];
     document.getElementById('day-title').innerText = isDisplayingToday ? `Сегодня (${activeDayInfo.name})` : `Расписание на завтра (${activeDayInfo.name})`;
     const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
-    
     let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!", lessonProgressPercent = 0;
     const tCard = document.getElementById('main-timer-card'); tCard.className = "timer-card gyro-tilt";
     
@@ -219,13 +218,25 @@ function updateLogic() {
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
         let progressSVGHTML = '';
+        
+        // ИСПРАВЛЕНО: Адаптивный SVG-контур, который считывает реальные размеры плашки 100% ширины
         if (activeLessonId === slot) {
-            let perimeter = 650; let offset = perimeter - (perimeter * lessonProgressPercent);
-            progressSVGHTML = `<svg class="lesson-progress-svg"><defs><linearGradient id="rainbow-grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#ff0055"><animate attributeName="stop-color" values="#ff0055;#00ffcc;#9900ff;#ffaa00;#ff0055" dur="32s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#00ffcc"><animate attributeName="stop-color" values="#00ffcc;#9900ff;#ffaa00;#ff0055;#00ffcc" dur="32s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="1.5" y="1.5" width="99%" height="95%" rx="16" class="lesson-progress-rect" stroke-dasharray="${perimeter}" stroke-dashoffset="${offset}"/></svg>`;
+            progressSVGHTML = `
+                <svg class="lesson-progress-svg">
+                    <defs>
+                        <linearGradient id="rainbow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#ff0055"><animate attributeName="stop-color" values="#ff0055;#00ffcc;#9900ff;#ffaa00;#ff0055" dur="32s" repeatCount="indefinite"/></stop>
+                            <stop offset="100%" stop-color="#00ffcc"><animate attributeName="stop-color" values="#00ffcc;#9900ff;#ffaa00;#ff0055;#00ffcc" dur="32s" repeatCount="indefinite"/></stop>
+                        </linearGradient>
+                    </defs>
+                    <rect x="1" y="1" width="99%" height="95%" rx="18" class="lesson-progress-rect" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - (lessonProgressPercent * 100)}"/>
+                </svg>
+            `;
         }
         row.innerHTML = `${progressSVGHTML}<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
         listContainer.appendChild(row);
     }
 }
 
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
 buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
