@@ -42,7 +42,21 @@ function switchScreen(index) {
     currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     swiper.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
     swiper.style.transform = `translateX(${currentTranslate}px)`;
-    generateFluidBackground();
+    
+    // Обновляем визуальный стиль плашек при переключении
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach((tab, i) => {
+        if (i === index) {
+            tab.classList.add('active');
+            // Красим активную кнопку в цвет текущего градиента фона
+            tab.style.background = 'var(--accent)';
+            tab.style.color = '#000000'; // Черный текст для идеального контраста на неоне
+        } else {
+            tab.classList.remove('active');
+            tab.style.background = 'none';
+            tab.style.color = 'var(--text-sub)';
+        }
+    });
 }
 
 window.addEventListener('click', (e) => {
@@ -78,6 +92,11 @@ function generateFluidBackground() {
         radialGrad.addColorStop(0.5, selected.colors[index] + (isDark ? '22' : '55')); radialGrad.addColorStop(1, 'transparent');
         ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply'; ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
+
+     // Динамически передаем первый сочный цвет из выбранной палитры в стили сайта
+    const primaryNeonColor = selected.colors[0];
+    document.documentElement.style.setProperty('--accent', primaryNeonColor);
+    document.documentElement.style.setProperty('--neon-glow', primaryNeonColor + (isDark ? '66' : '33'));
 }
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
