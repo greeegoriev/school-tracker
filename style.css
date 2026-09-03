@@ -49,6 +49,7 @@ body, html {
     will-change: transform;
 }
 
+/* Кастомный футуристичный Pull-to-Refresh */
 .pull-indicator {
     position: fixed;
     top: -60px;
@@ -82,6 +83,7 @@ body, html {
     animation: rotate 0.8s linear infinite;
 }
 
+/* Премиальная адаптивная плашка предупреждения */
 .outdated-badge {
     position: fixed;
     top: calc(12px + env(safe-area-inset-top));
@@ -166,6 +168,7 @@ body, html {
     transform-style: preserve-3d;
 }
 
+/* Возвращен крупный и массивный размер таймера */
 .timer-card {
     padding: 32px 20px;
     text-align: center;
@@ -243,6 +246,7 @@ body, html {
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* Бегущая радужная рамка для активного урока */
 .lesson-row.active {
     background: rgba(5, 5, 8, 0.85);
     border: 1px solid transparent;
@@ -294,14 +298,16 @@ body, html {
     font-weight: 500;
 }
 
+/* 🔄 ОПТИМИЗАЦИЯ: Полностью скрываем уродливые полосы прокрутки для режима 2D-карты */
 .week-matrix-box {
     padding: 10px;
     height: 74vh;
     display: flex;
     flex-direction: column;
     margin-top: 15px;
-    overflow: auto;
-    touch-action: pan-x pan-y pinch-zoom;
+    overflow: hidden; 
+    touch-action: none; 
+    position: relative;
 }
 
 .matrix-grid {
@@ -312,6 +318,8 @@ body, html {
     min-height: 520px;
     min-width: 320px;
     width: 100%;
+    transform-origin: 0 0; 
+    will-change: transform;
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
