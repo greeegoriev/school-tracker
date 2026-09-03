@@ -317,6 +317,7 @@ body, html {
     width: 100%;
     /* Гарантирует плавную трансформацию сетки при зуме */
     transform-origin: top left;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .matrix-cell {
