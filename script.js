@@ -29,7 +29,7 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    const soloColor = activePalette.colors[0];
+    const soloColor = activePalette.colors;
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -49,10 +49,8 @@ function initBlobs() {
 }
 
 function renderLoop() {
-    // ИСПРАВЛЕНО: Безопасный предохранитель инициализации палитры на старте страницы
     if (!activePalette) selectRandomPalette();
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
@@ -78,8 +76,8 @@ function renderLoop() {
 
 function updateMousePos(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const clientX = e.touches ? e.touches.clientX : e.clientX; 
+    const clientY = e.touches ? e.touches.clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 window.addEventListener('touchstart', e => { 
@@ -182,6 +180,7 @@ function updateLogic() {
     const isDisplayingToday = (targetDay === day); const activeDayInfo = daysData[targetDay];
     document.getElementById('day-title').innerText = isDisplayingToday ? `Сегодня (${activeDayInfo.name})` : `Расписание на завтра (${activeDayInfo.name})`;
     const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
+    
     let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!", lessonProgressPercent = 0;
     const tCard = document.getElementById('main-timer-card'); tCard.className = "timer-card gyro-tilt";
     
@@ -204,7 +203,9 @@ function updateLogic() {
                 for (let i = 0; i < lessonsKeys.length - 1; i++) {
                     let currEnd = parseTime(timeTable[lessonsKeys[i] - 1].end), nextStart = parseTime(timeTable[lessonsKeys[i+1] - 1].start);
                     if (currentMinutes > currEnd && currentMinutes < nextStart) {
-                        let diff = nextStart - currentMinutes; currentStatusText = "Идет перемена"; timeDiffText = `${diff} мин.`; subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
+                        let diff = nextStart - currentMinutes; 
+                        // ИСПРАВЛЕНО: Текст изменен на "До конца перемены" согласно задаче
+                        currentStatusText = "До конца перемены"; timeDiffText = `${diff} мин.`; subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
                         if (diff <= 2) tCard.classList.add('break-warning'); else tCard.classList.add('break-active'); break;
                     }
                 }
@@ -218,25 +219,12 @@ function updateLogic() {
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
         let progressSVGHTML = '';
-        
-        // ИСПРАВЛЕНО: Адаптивный SVG-контур, который считывает реальные размеры плашки 100% ширины
         if (activeLessonId === slot) {
-            progressSVGHTML = `
-                <svg class="lesson-progress-svg">
-                    <defs>
-                        <linearGradient id="rainbow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stop-color="#ff0055"><animate attributeName="stop-color" values="#ff0055;#00ffcc;#9900ff;#ffaa00;#ff0055" dur="32s" repeatCount="indefinite"/></stop>
-                            <stop offset="100%" stop-color="#00ffcc"><animate attributeName="stop-color" values="#00ffcc;#9900ff;#ffaa00;#ff0055;#00ffcc" dur="32s" repeatCount="indefinite"/></stop>
-                        </linearGradient>
-                    </defs>
-                    <rect x="1" y="1" width="99%" height="95%" rx="18" class="lesson-progress-rect" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - (lessonProgressPercent * 100)}"/>
-                </svg>
-            `;
+            progressSVGHTML = `<svg class="lesson-progress-svg"><defs><linearGradient id="rainbow-grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#ff0055"><animate attributeName="stop-color" values="#ff0055;#00ffcc;#9900ff;#ffaa00;#ff0055" dur="32s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#00ffcc"><animate attributeName="stop-color" values="#00ffcc;#9900ff;#ffaa00;#ff0055;#00ffcc" dur="32s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="1" y="1" width="99%" height="95%" rx="18" class="lesson-progress-rect" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - (lessonProgressPercent * 100)}"/></svg>`;
         }
         row.innerHTML = `${progressSVGHTML}<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
         listContainer.appendChild(row);
     }
 }
 
-function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
 buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
