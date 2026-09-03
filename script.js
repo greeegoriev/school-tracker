@@ -38,9 +38,7 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    
-    // ИСПРАВЛЕНО: Извлекаем строго ПЕРВЫЙ цвет строки из массива для плашек навигации
-    const soloColor = activePalette.colors[0];
+    const soloColor = activePalette.colors[0]; // ИСПРАВЛЕНО: Берем первый цвет как текст для CSS переменных
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -60,14 +58,12 @@ function initBlobs() {
 function renderLoop() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); // Оптимальная вязкость шлейфа
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+    ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
     
     if (mouse.active && mouse.targetX !== null) {
         if (mouse.x === null) { mouse.x = mouse.targetX; mouse.y = mouse.targetY; }
-        mouse.x += (mouse.targetX - mouse.x) * 0.08; mouse.y += (mouse.targetY - mouse.y) * 0.08;
+        mouse.x += (mouse.targetX - mouse.x) * 0.1; mouse.y += (mouse.targetY - mouse.y) * 0.1;
     }
 
     blobs.forEach((blob) => {
@@ -77,14 +73,12 @@ function renderLoop() {
         
         if (mouse.active && mouse.x !== null) {
             let dx = mouse.x - blob.x; let dy = mouse.y - blob.y; let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < canvas.width * 0.6) { blob.x += (dx / dist) * 0.8; blob.y += (dy / dist) * 0.8; }
+            if (dist < canvas.width * 0.6) { blob.x += (dx / dist) * 1.2; blob.y += (dy / dist) * 1.2; }
         }
         
         ctx.save();
         let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
-        radialGrad.addColorStop(0, blob.color + (isDark ? '99' : 'bb')); 
-        radialGrad.addColorStop(0.3, blob.color + '22'); 
-        radialGrad.addColorStop(1, 'transparent');
+        radialGrad.addColorStop(0, blob.color + (isDark ? '99' : 'bb')); radialGrad.addColorStop(0.3, blob.color + '22'); radialGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
     requestAnimationFrame(renderLoop);
@@ -92,36 +86,49 @@ function renderLoop() {
 
 function updateMousePos(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches.clientX : e.clientX; 
-    const clientY = e.touches ? e.touches.clientY : e.clientY;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width);
     mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
+// УМНОЕ РАЗДЕЛЕНИЕ ЖЕСТОВ: Блокируем конфликты со скроллом списка уроков
 window.addEventListener('touchstart', e => { 
-    if(e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
-    isDragging = true; dragDirection = null; mouse.active = true; startX = e.touches.clientX; startY = e.touches.clientY;
-    updateMousePos(e);
+    if (e.target.closest('.navigation-tabs')) return;
+    isDragging = true; dragDirection = null; 
+    const touch = e.touches[0]; startX = touch.clientX; startY = touch.clientY;
+    
+    // Включаем интерактивный трек пальца, только если тапаем НЕ по списку уроков
+    if (!e.target.closest('.lessons-list')) {
+        mouse.active = true; updateMousePos(e);
+    }
 });
+
 window.addEventListener('touchmove', e => {
     if (!isDragging) return;
-    let diffX = e.touches.clientX - startX; let diffY = e.touches.clientY - startY;
+    const touch = e.touches[0];
+    let diffX = touch.clientX - startX; let diffY = touch.clientY - startY;
+    
     if (mouse.active) updateMousePos(e);
     
     if (!dragDirection) {
-        if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
-        else if (diffY > 15 && currentIdx === 0) dragDirection = 'pull';
+        if (Math.abs(diffX) > Math.abs(diffY) + 15) {
+            dragDirection = 'horizontal';
+        } else if (diffY > 15 && currentIdx === 0 && swiper.scrollTop <= 0) {
+            // Разрешаем свайп обновления, только если мы вверху страницы
+            dragDirection = 'pull';
+        }
     }
+    
     if (dragDirection === 'horizontal') {
         currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`;
     } else if (dragDirection === 'pull') {
+        e.preventDefault(); // Запрещаем нативный отскок Android
         let pullDistance = Math.min(diffY * 0.4, 90);
         pullIndicator.style.transform = `translate3d(-50%, ${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1);
         pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
     }
-    if (mouse.active) updateMousePos(e);
-});
-
+}, { passive: false }); // Важно для работы preventDefault на Android
 window.addEventListener('touchend', () => {
     isDragging = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
     if (dragDirection === 'horizontal') {
@@ -135,13 +142,11 @@ window.addEventListener('touchend', () => {
     }
 });
 
+// ГАРАНТИРОВАННАЯ СМЕНА ПАЛИТРЫ ОТ КАЖДОГО КЛИКА НА ЗОНАХ БЕЗ СКРОЛЛА
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
-    activePalette = null; // Полностью сбрасываем старую палитру
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищаем холст под новый цвет
-    selectRandomPalette(); 
+    activePalette = null; ctx.clearRect(0, 0, canvas.width, canvas.height); selectRandomPalette(); 
 });
-
 
 function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
@@ -230,5 +235,4 @@ function updateLogic() {
 }
 
 function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
-buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); renderLoop();
-
+buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
