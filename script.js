@@ -17,7 +17,6 @@ const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getConte
 const swiper = document.getElementById('swiper'); const pullIndicator = document.getElementById('pull-indicator'); const pullSvg = document.getElementById('pull-svg');
 let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging = false, currentIdx = 0, dragDirection = null, lastHeartbeat = Date.now(), activePalette = null;
 
-// Массив физических жидких сфер
 let blobs = [];
 let mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
 
@@ -34,16 +33,18 @@ const lightPalettes = [
     { base: '#f9fff7', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }
 ];
 
+// ГАРАНТИЯ ПОРЯДКА: Вспомогательный парсер времени объявлен первым в коде
+function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 60 + m; }
+
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    document.documentElement.style.setProperty('--accent', activePalette.colors[1]);
-    document.documentElement.style.setProperty('--neon-glow', activePalette.colors[1] + (isDark ? '66' : '33'));
+    document.documentElement.style.setProperty('--accent', activePalette.colors);
+    document.documentElement.style.setProperty('--neon-glow', activePalette.colors + (isDark ? '66' : '33'));
     initBlobs();
 }
 function initBlobs() {
     blobs = [];
-    // Создаем 5 базовых автономных ртутных капель
     for (let i = 0; i < 5; i++) {
         blobs.push({
             x: Math.random() * canvas.width, y: Math.random() * canvas.height,
@@ -56,66 +57,49 @@ function initBlobs() {
 
 function renderLoop() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    
-    // МЯГКОЕ ЗАТУХАНИЕ (Убирает стробоскоп, создает жидкий шлейф-ртуть)
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = activePalette.base + (isDark ? '1a' : '22'); // Прозрачность 10% создает эффект вязкости
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+    ctx.fillStyle = activePalette.base + (isDark ? '1a' : '22'); ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply';
     
-    // Плавная интерполяция координат пальца (lerp)
     if (mouse.active && mouse.targetX !== null) {
         if (mouse.x === null) { mouse.x = mouse.targetX; mouse.y = mouse.targetY; }
         mouse.x += (mouse.targetX - mouse.x) * 0.1; mouse.y += (mouse.targetY - mouse.y) * 0.1;
     }
 
     blobs.forEach((blob) => {
-        // Автономное движение капель
         blob.x += blob.vx; blob.y += blob.vy;
-        
-        // Отскок от краев холста
         if (blob.x < 0 || blob.x > canvas.width) blob.vx *= -1;
         if (blob.y < 0 || blob.y > canvas.height) blob.vy *= -1;
         
-        // ВЗАИМОДЕЙСТВИЕ С ПАЛЬЦЕМ: Сферы плавно притягиваются или обтекают руку
         if (mouse.active && mouse.x !== null) {
-            let dx = mouse.x - blob.x; let dy = mouse.y - blob.y;
-            let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < canvas.width * 0.5) {
-                blob.x += (dx / dist) * 1.5; blob.y += (dy / dist) * 1.5; // Эффект вязкого притяжения ртути
-            }
+            let dx = mouse.x - blob.x; let dy = mouse.y - blob.y; let dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < canvas.width * 0.5) { blob.x += (dx / dist) * 1.5; blob.y += (dy / dist) * 1.5; }
         }
         
         ctx.save();
         let radialGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.radius);
-        radialGrad.addColorStop(0, blob.color + (isDark ? 'aa' : 'ff'));
-        radialGrad.addColorStop(0.4, blob.color + '33');
-        radialGrad.addColorStop(1, 'transparent');
+        radialGrad.addColorStop(0, blob.color + (isDark ? 'aa' : 'ff')); radialGrad.addColorStop(0.4, blob.color + '33'); radialGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
-    
     requestAnimationFrame(renderLoop);
 }
 
 function updateMousePos(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    // Точный перевод экранных координат в пиксели Canvas (убирает улетание вверх-влево)
+    const clientX = e.touches ? e.touches.clientX : e.clientX; const clientY = e.touches ? e.touches.clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width);
     mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return;
-    isDragging = true; dragDirection = null; mouse.active = true;
-    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    isDragging = true; dragDirection = null; mouse.active = true; startX = e.touches.clientX; startY = e.touches.clientY;
     updateMousePos(e);
 });
+
 window.addEventListener('touchmove', e => {
     if (!isDragging) return;
-    let diffX = e.touches[0].clientX - startX; let diffY = e.touches[0].clientY - startY;
+    let diffX = e.touches.clientX - startX; let diffY = e.touches.clientY - startY;
     if (mouse.active) updateMousePos(e);
     
     if (!dragDirection) {
@@ -130,7 +114,6 @@ window.addEventListener('touchmove', e => {
         pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
     }
 });
-
 window.addEventListener('touchend', () => {
     isDragging = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
     if (dragDirection === 'horizontal') {
