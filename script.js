@@ -75,8 +75,8 @@ function renderLoop() {
 
 function updateMousePos(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches.clientX : e.clientX; 
-    const clientY = e.touches ? e.touches.clientY : e.clientY;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 window.addEventListener('touchstart', e => { 
@@ -215,17 +215,17 @@ function updateLogic() {
         const name = activeDayInfo.lessons[slot]; if (!name) continue;
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
-        
-        // ИСПРАВЛЕНО: Генерируем внутреннюю ползущую подложку-плашку вместо контурного SVG-прямоугольника
         let progressHTML = '';
         if (activeLessonId === slot) {
             let widthPercent = (lessonProgressPercent * 100).toFixed(1);
             progressHTML = `<div class="lesson-progress-fill" style="width: ${widthPercent}%"></div>`;
         }
-        
         row.innerHTML = `${progressHTML}<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
         listContainer.appendChild(row);
     }
 }
 
-buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
+// ГАРАНТИРОВАННАЯ ИНИЦИАЛИЗАЦИЯ: Функция resizeCanvas объявлена до вызова слушателей событий
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
+
+buildMatrix(); resizeCanvas(); selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
