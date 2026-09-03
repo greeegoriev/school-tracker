@@ -19,8 +19,6 @@ let startX = 0, startY = 0, currentTranslate = 0, prevTranslate = 0, isDragging 
 
 let blobs = [];
 let mouse = { x: null, y: null, targetX: null, targetY: null, active: false };
-
-// Внедрено: Координаты для свободного 2D перемещения (Pan/Drag) по увеличенной сетке
 let matrixScale = 1, startHypot = 0, isZuming = false, lastTapTime = 0;
 let panX = 0, panY = 0, startPanX = 0, startPanY = 0, isPanning = false;
 
@@ -55,6 +53,7 @@ function renderLoop() {
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = activePalette.base + (isDark ? '25' : '35'); ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = isDark ? 'screen' : 'difference';
+    
     if (mouse.active && mouse.targetX !== null) {
         if (mouse.x === null) { mouse.x = mouse.targetX; mouse.y = mouse.targetY; }
         mouse.x += (mouse.targetX - mouse.x) * 0.08; mouse.y += (mouse.targetY - mouse.y) * 0.08;
@@ -75,33 +74,22 @@ function renderLoop() {
 }
 
 function updateMousePos(e) {
-    const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     mouse.targetX = (clientX - rect.left) * (canvas.width / rect.width); mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
-
 window.addEventListener('touchstart', e => { 
     if(e.target.closest('.navigation-tabs')) return;
-    
-    // 1. ЕСЛИ ТАПНУЛИ ПО МАТРИЦЕ НЕДЕЛИ:
-    if (e.target.closest('.week-matrix-box')) {
-        const grid = document.getElementById('matrix-grid');
-        grid.style.transition = 'none'; // Отключаем плавность при таче, чтобы ничего не дергалось
-        
-        if (e.touches.length === 2) {
-            isZuming = true; isPanning = false; isDragging = false;
-            let t1 = e.touches[0], t2 = e.touches[1];
-            startHypot = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-            return;
-        } else if (e.touches.length === 1 && matrixScale > 1.05) {
-            // Если сетка ПРИБЛИЖЕНА, включаем режим свободного 2D перетаскивания (Pan) и глушим свайпы!
-            isPanning = true; isDragging = false;
-            startPanX = e.touches[0].clientX - panX;
-            startPanY = e.touches[0].clientY - panY;
-            return;
-        }
+    if (e.touches.length === 2 && e.target.closest('.week-matrix-box')) {
+        isZuming = true; isPanning = false; isDragging = false; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'none';
+        let t1 = e.touches[0], t2 = e.touches[1]; let rect = grid.getBoundingClientRect();
+        let midX = ((t1.clientX + t2.clientX) / 2) - rect.left; let midY = ((t1.clientY + t2.clientY) / 2) - rect.top;
+        grid.style.transformOrigin = `${midX}px ${midY}px`; startHypot = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY); return;
     }
-    
-    // 2. ОБЫЧНЫЙ ОДИНОЧНЫЙ ТАП:
+    if (e.touches.length === 1 && e.target.closest('.week-matrix-box') && matrixScale > 1.05) {
+        isPanning = true; isDragging = false; startPanX = e.touches[0].clientX - panX; startPanY = e.touches[0].clientY - panY; return;
+    }
     if (e.touches.length === 1) {
         isDragging = true; dragDirection = null; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
         if (!e.target.closest('.lessons-list') && !e.target.closest('.week-matrix-box')) { mouse.active = true; updateMousePos(e); }
@@ -109,78 +97,35 @@ window.addEventListener('touchstart', e => {
 });
 
 window.addEventListener('touchmove', e => {
-    // А. ОБРАБОТКА РУЧНОГО ЗУМА ДВУМЯ ПАЛЬЦАМИ
     if (isZuming && e.touches.length === 2) {
-        e.preventDefault();
-        let t1 = e.touches[0], t2 = e.touches[1];
-        let currentHypot = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-        let factor = currentHypot / (startHypot || 1);
-        matrixScale = Math.min(Math.max(matrixScale * factor, 1.0), 2.5); 
-        document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`;
-        startHypot = currentHypot;
-        return;
+        e.preventDefault(); let t1 = e.touches[0], t2 = e.touches[1]; let currentHypot = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        let factor = currentHypot / (startHypot || 1); matrixScale = Math.min(Math.max(matrixScale * factor, 1.0), 2.5); 
+        document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; startHypot = currentHypot; return;
     }
-    
-    // Б. ИСПРАВЛЕНО: Свободное перетаскивание одним пальцем по увеличенной карте уроков
     if (isPanning && e.touches.length === 1 && matrixScale > 1.05) {
-        e.preventDefault(); // Намертво блокируем улет карусели на вкладку "День"!
-        panX = e.touches[0].clientX - startPanX;
-        panY = e.touches[0].clientY - startPanY;
-        
-        // Ограничиваем вылет сетки за края экрана, чтобы Кирилл не потерял таблицу в пустоте
-        const box = document.querySelector('.week-matrix-box');
-        let maxPanX = (matrixScale - 1) * box.offsetWidth * 0.4;
-        let maxPanY = (matrixScale - 1) * box.offsetHeight * 0.5;
-        panX = Math.min(Math.max(panX, -maxPanX - 100), maxPanX + 50);
-        panY = Math.min(Math.max(panY, -maxPanY - 120), 20);
-        
-        document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`;
-        return;
+        e.preventDefault(); panX = e.touches[0].clientX - startPanX; panY = e.touches[0].clientY - startPanY;
+        const box = document.querySelector('.week-matrix-box'); let maxPanX = (matrixScale - 1) * box.offsetWidth * 0.4; let maxPanY = (matrixScale - 1) * box.offsetHeight * 0.5;
+        panX = Math.min(Math.max(panX, -maxPanX - 100), maxPanX + 50); panY = Math.min(Math.max(panY, -maxPanY - 120), 20);
+        document.getElementById('matrix-grid').style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${matrixScale})`; return;
     }
-
     if (!isDragging || e.touches.length > 1) return;
-    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY;
-    if (mouse.active) updateMousePos(e);
-    
-    if (!dragDirection) {
-        if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
-        else if (diffY > 15 && currentIdx === 0) dragDirection = 'pull';
-    }
-    if (dragDirection === 'horizontal') {
-        currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`;
-    } else if (dragDirection === 'pull') {
-        e.preventDefault();
-        let pullDistance = Math.min(diffY * 0.4, 90);
-        pullIndicator.style.transform = `translate3d(-50%, ${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1);
-        pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
-    }
+    if (currentIdx === 1 && matrixScale > 1.05) return;
+    let diffX = e.touches[0].clientX - startX, diffY = e.touches[0].clientY - startY; if (mouse.active) updateMousePos(e);
+    if (!dragDirection) { if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal'; else if (diffY > 15 && currentIdx === 0) dragDirection = 'pull'; }
+    if (dragDirection === 'horizontal') { currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`; }
+    else if (dragDirection === 'pull') { e.preventDefault(); let pullDistance = Math.min(diffY * 0.4, 90); pullIndicator.style.transform = `translate3d(-50%,${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1); pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`; }
 }, { passive: false });
+
 window.addEventListener('touchend', () => {
     isDragging = false; isZuming = false; isPanning = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
-    if (dragDirection === 'horizontal') {
-        let movedBy = currentTranslate - prevTranslate;
-        if (movedBy < -100 && currentIdx < 1) currentIdx++; if (movedBy > 100 && currentIdx > 0) currentIdx--; switchScreen(currentIdx);
-    } else if (dragDirection === 'pull') {
-        let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g,'')) || 0;
-        pullIndicator.style.transition = 'all 0.3s ease';
-        if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); }
-        else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; }
-    }
+    if (dragDirection === 'horizontal') { let movedBy = currentTranslate - prevTranslate; if (movedBy < -100 && currentIdx < 1) currentIdx++; if (movedBy > 100 && currentIdx > 0) currentIdx--; switchScreen(currentIdx); }
+    else if (dragDirection === 'pull') { let lastY = parseFloat(pullIndicator.style.transform.replace(/[^0-9.]/g,'')) || 0; pullIndicator.style.transition = 'all 0.3s ease'; if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); } else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; } }
 });
-
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
-    
-    // ИСПРАВЛЕНО: При двойном тапе сбрасываем масштаб (100%) И плавно центрируем координаты (0, 0)
     if (e.target.closest('.week-matrix-box')) {
         let currentTime = Date.now(); let tapLength = currentTime - lastTapTime;
-        if (tapLength < 300 && tapLength > 0) {
-            matrixScale = 1; panX = 0; panY = 0;
-            const grid = document.getElementById('matrix-grid');
-            grid.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
-            grid.style.transform = 'translate3d(0, 0, 0) scale(1)';
-            e.preventDefault(); return;
-        }
+        if (tapLength < 300 && tapLength > 0) { matrixScale = 1; panX = 0; panY = 0; const grid = document.getElementById('matrix-grid'); grid.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; grid.style.transform = 'translate3d(0, 0, 0) scale(1)'; e.preventDefault(); return; }
         lastTapTime = currentTime;
     }
     activePalette = null; selectRandomPalette(); 
@@ -237,7 +182,8 @@ function updateLogic() {
     const isDisplayingToday = (targetDay === day); const activeDayInfo = daysData[targetDay];
     document.getElementById('day-title').innerText = isDisplayingToday ? `Сегодня (${activeDayInfo.name})` : `Расписание на завтра (${activeDayInfo.name})`;
     const listContainer = document.getElementById('day-lessons'); listContainer.innerHTML = '';
-    let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!";
+    
+    let activeLessonId = null, currentStatusText = "Уроки закончены", timeDiffText = "--:--", subText = "Хорошего отдыха!", lessonProgressPercent = 0;
     const tCard = document.getElementById('main-timer-card'); tCard.className = "timer-card gyro-tilt";
     
     if (isDisplayingToday && daysData[day]) {
@@ -248,7 +194,11 @@ function updateLogic() {
             subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
         } else {
             for (let lNum of Object.keys(todayLessons).map(Number)) {
-                let tBox = timeTable[lNum - 1]; if (currentMinutes >= parseTime(tBox.start) && currentMinutes <= parseTime(tBox.end)) { activeLessonId = lNum; currentStatusText = `Идет ${lNum}-й урок`; timeDiffText = `${parseTime(tBox.end) - currentMinutes} мин.`; subText = `До конца урока: ${todayLessons[lNum]}`; break; }
+                let tBox = timeTable[lNum - 1]; let startM = parseTime(tBox.start), endM = parseTime(tBox.end);
+                if (currentMinutes >= startM && currentMinutes <= endM) {
+                    activeLessonId = lNum; currentStatusText = `Идет ${lNum}-й урок`; timeDiffText = `${endM - currentMinutes} мин.`; subText = `До конца урока: ${todayLessons[lNum]}`;
+                    lessonProgressPercent = (currentMinutes - startM) / (endM - startM); break;
+                }
             }
             if (!activeLessonId) {
                 const lessonsKeys = Object.keys(todayLessons).map(Number).sort();
@@ -261,17 +211,21 @@ function updateLogic() {
                 }
             }
         }
-    } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий weekend: ${activeDayInfo.name}`; }
+    } else { currentStatusText = "Уроки завершены"; timeDiffText = "Отдых"; subText = `Следующий день: ${activeDayInfo.name}`; }
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerText = timeDiffText; document.getElementById('timer-sub').innerText = subText;
     
     for (let slot = 1; slot <= 8; slot++) {
         const name = activeDayInfo.lessons[slot]; if (!name) continue;
         const row = document.createElement('div'); row.className = `lesson-row ${activeLessonId === slot ? 'active' : ''}`;
         const currentSlotTime = timeTable.find(t => t.num === slot);
-        row.innerHTML = `<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
+        let progressSVGHTML = '';
+        if (activeLessonId === slot) {
+            let perimeter = 650; let offset = perimeter - (perimeter * lessonProgressPercent);
+            progressSVGHTML = `<svg class="lesson-progress-svg"><defs><linearGradient id="rainbow-grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#ff0055"><animate attributeName="stop-color" values="#ff0055;#00ffcc;#9900ff;#ffaa00;#ff0055" dur="32s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#00ffcc"><animate attributeName="stop-color" values="#00ffcc;#9900ff;#ffaa00;#ff0055;#00ffcc" dur="32s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="1.5" y="1.5" width="99%" height="95%" rx="16" class="lesson-progress-rect" stroke-dasharray="${perimeter}" stroke-dashoffset="${offset}"/></svg>`;
+        }
+        row.innerHTML = `${progressSVGHTML}<div class="lesson-left"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div><div class="lesson-meta"><div>каб. ${activeDayInfo.rooms[slot]}</div><div style="font-size:11px; opacity:0.6">${currentSlotTime ? currentSlotTime.start : "--:--"}</div></div>`;
         listContainer.appendChild(row);
     }
 }
 
-function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; }
 buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; selectRandomPalette(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas); renderLoop();
