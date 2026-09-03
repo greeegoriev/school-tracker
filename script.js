@@ -40,8 +40,7 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    // ФИКС: Извлекаем строго нулевой элемент массива цветов, возвращая неоновые тона кнопкам дня/недели
-    const soloColor = activePalette.colors[0];
+    const soloColor = activePalette.colors[0]; // ГАРАНТИРОВАННЫЙ ИНДЕКС ДЛЯ ЦВЕТА КНОПОК НАВИГАЦИИ
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -123,10 +122,13 @@ window.addEventListener('touchmove', e => {
     }
     if (!isDragging || e.touches.length > 1) return;
     if (currentIdx === 1 && matrixScale > 1.05) return;
+    
     let diffX = e.touches.clientX - startX, diffY = e.touches.clientY - startY; if (mouse.active) updateMousePos(e);
+    
     if (!dragDirection) {
         if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
-        else if (diffY > 15 && currentIdx === 0 && document.getElementById('day-lessons').scrollTop === 0) dragDirection = 'pull';
+        // 🛠️ ФИКС: Слушатель считывает скролл родительского Bento-бокса со стопроцентной точностью
+        else if (diffY > 15 && currentIdx === 0 && document.querySelector('.lessons-list').scrollTop === 0) dragDirection = 'pull';
     }
     if (dragDirection === 'horizontal') { currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`; }
     else if (dragDirection === 'pull') { e.preventDefault(); let pullDistance = Math.min(diffY * 0.4, 90); pullIndicator.style.transform = `translate3d(-50%,${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1); pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`; }
@@ -251,10 +253,7 @@ function updateLogic() {
                     breakBadgeHTML = `<div class="break-radial-container"><svg class="break-radial-svg" viewBox="0 0 32 32"><circle class="break-radial-bg" cx="16" cy="16" r="14"/><circle class="break-radial-track" cx="16" cy="16" r="14" stroke-dasharray="${arcOffset}" stroke-dashoffset="${currentOffset}"/></svg><span class="break-radial-num">${breakDuration}</span></div>`;
                 }
             }
-        } else {
-            // Блок-распорка для идеального выравнивания времени последнего урока
-            breakBadgeHTML = `<div class="break-radial-spacer"></div>`;
-        }
+        } else { breakBadgeHTML = `<div class="break-radial-spacer"></div>`; }
         row.innerHTML = `${progressHTML}<div class="lesson-left"><div class="lesson-title-block"><div class="lesson-num">${slot}</div><div class="lesson-name">${name}</div></div>${roomHTML}</div><div class="lesson-meta"><div class="lesson-time-row"><span>${currentSlotTime ? currentSlotTime.start : "--:--"}</span>${breakBadgeHTML}</div></div>`;
         listContainer.appendChild(row);
     }
