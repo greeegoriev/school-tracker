@@ -42,7 +42,7 @@ window.addEventListener('touchmove', e => {
         pullIndicator.style.transform = `translate3d(-50%, ${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1);
         pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
     }
-    generateFluidBackground();
+    if (typeof generateFluidBackground === 'function') generateFluidBackground();
 });
 
 window.addEventListener('touchend', () => {
@@ -56,18 +56,17 @@ window.addEventListener('touchend', () => {
         if (lastY > 55) { pullIndicator.classList.add('refreshing'); pullIndicator.style.transform = 'translate3d(-50%, 60px, 0)'; setTimeout(() => location.reload(true), 600); }
         else { pullIndicator.style.transform = 'translate3d(-50%, 0, 0)'; pullIndicator.style.opacity = '0'; }
     }
-    touchX = touchY = null; generateFluidBackground();
+    touchX = touchY = null; if (typeof generateFluidBackground === 'function') generateFluidBackground();
 });
 
 window.addEventListener('click', e => { if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; activePalette = null; generateFluidBackground(); });
-
 function generateFluidBackground() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const darkPalettes = [{ base: '#060012', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, { base: '#010514', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, { base: '#030c02', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }];
     const lightPalettes = [{ base: '#fff5f7', colors: ['#ff0055', '#ff9900', '#00ffcc', '#ff00aa'] }, { base: '#f0f4ff', colors: ['#0072ff', '#00f6ff', '#ff007f', '#7000ff'] }, { base: '#f7fff5', colors: ['#38ef7d', '#00ff66', '#ffea00', '#11998e'] }];
     if (!activePalette) { activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)]; }
     
-    const currentAccentColor = activePalette.colors;
+    const currentAccentColor = activePalette.colors[1]; // Берем яркий цвет для плашек и рамки урока
     document.documentElement.style.setProperty('--accent', currentAccentColor);
     document.documentElement.style.setProperty('--neon-glow', currentAccentColor + (isDark ? '66' : '33'));
     
@@ -85,6 +84,7 @@ function generateFluidBackground() {
         ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply'; ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
 }
+
 function switchScreen(index) {
     currentIdx = index; currentTranslate = currentIdx * -window.innerWidth; prevTranslate = currentTranslate;
     const sDay = document.getElementById('slide-day'), sWeek = document.getElementById('slide-week'), randomEffect = Math.floor(Math.random() * 3) + 1;
@@ -108,7 +108,6 @@ function switchScreen(index) {
     document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
     generateFluidBackground();
 }
-
 function buildMatrix() {
     const grid = document.getElementById('matrix-grid'); grid.innerHTML = '';
     let corner = document.createElement('div'); corner.className = 'matrix-cell header'; corner.innerText = '№'; grid.appendChild(corner);
@@ -177,4 +176,5 @@ function updateLogic() {
     }
 }
 
+function resizeCanvas() { canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); }
 buildMatrix(); canvas.width = window.innerWidth * 1.2; canvas.height = window.innerHeight * 1.2; generateFluidBackground(); updateLogic(); setInterval(updateLogic, 20000); window.addEventListener('resize', resizeCanvas);
