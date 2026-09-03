@@ -38,7 +38,8 @@ function parseTime(tStr) { let [h, m] = tStr.split(':').map(Number); return h * 
 function selectRandomPalette() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     activePalette = (isDark ? darkPalettes : lightPalettes)[Math.floor(Math.random() * 3)];
-    const soloColor = activePalette.colors[0]; // ИСПРАВЛЕНО: Берем первый цвет как текст для CSS переменных
+    
+    const soloColor = activePalette.colors[0];
     document.documentElement.style.setProperty('--accent', soloColor);
     document.documentElement.style.setProperty('--neon-glow', soloColor + (isDark ? '66' : '33'));
     initBlobs();
@@ -63,7 +64,7 @@ function renderLoop() {
     
     if (mouse.active && mouse.targetX !== null) {
         if (mouse.x === null) { mouse.x = mouse.targetX; mouse.y = mouse.targetY; }
-        mouse.x += (mouse.targetX - mouse.x) * 0.1; mouse.y += (mouse.targetY - mouse.y) * 0.1;
+        mouse.x += (mouse.targetX - mouse.x) * 0.08; mouse.y += (mouse.targetY - mouse.y) * 0.08;
     }
 
     blobs.forEach((blob) => {
@@ -73,7 +74,7 @@ function renderLoop() {
         
         if (mouse.active && mouse.x !== null) {
             let dx = mouse.x - blob.x; let dy = mouse.y - blob.y; let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < canvas.width * 0.6) { blob.x += (dx / dist) * 1.2; blob.y += (dy / dist) * 1.2; }
+            if (dist < canvas.width * 0.6) { blob.x += (dx / dist) * 0.8; blob.y += (dy / dist) * 0.8; }
         }
         
         ctx.save();
@@ -92,43 +93,31 @@ function updateMousePos(e) {
     mouse.targetY = (clientY - rect.top) * (canvas.height / rect.height);
 }
 
-// УМНОЕ РАЗДЕЛЕНИЕ ЖЕСТОВ: Блокируем конфликты со скроллом списка уроков
 window.addEventListener('touchstart', e => { 
-    if (e.target.closest('.navigation-tabs')) return;
-    isDragging = true; dragDirection = null; 
-    const touch = e.touches[0]; startX = touch.clientX; startY = touch.clientY;
-    
-    // Включаем интерактивный трек пальца, только если тапаем НЕ по списку уроков
-    if (!e.target.closest('.lessons-list')) {
-        mouse.active = true; updateMousePos(e);
-    }
+    if(e.target.closest('.navigation-tabs')) return;
+    isDragging = true; dragDirection = null; const touch = e.touches[0]; startX = touch.clientX; startY = touch.clientY;
+    if (!e.target.closest('.lessons-list')) { mouse.active = true; updateMousePos(e); }
 });
 
 window.addEventListener('touchmove', e => {
     if (!isDragging) return;
-    const touch = e.touches[0];
-    let diffX = touch.clientX - startX; let diffY = touch.clientY - startY;
-    
+    const touch = e.touches[0]; let diffX = touch.clientX - startX; let diffY = touch.clientY - startY;
     if (mouse.active) updateMousePos(e);
     
     if (!dragDirection) {
-        if (Math.abs(diffX) > Math.abs(diffY) + 15) {
-            dragDirection = 'horizontal';
-        } else if (diffY > 15 && currentIdx === 0 && swiper.scrollTop <= 0) {
-            // Разрешаем свайп обновления, только если мы вверху страницы
-            dragDirection = 'pull';
-        }
+        if (Math.abs(diffX) > Math.abs(diffY) + 15) dragDirection = 'horizontal';
+        else if (diffY > 15 && currentIdx === 0) dragDirection = 'pull';
     }
-    
     if (dragDirection === 'horizontal') {
         currentTranslate = prevTranslate + diffX; swiper.style.transform = `translateX(${currentTranslate}px)`;
     } else if (dragDirection === 'pull') {
-        e.preventDefault(); // Запрещаем нативный отскок Android
+        e.preventDefault();
         let pullDistance = Math.min(diffY * 0.4, 90);
         pullIndicator.style.transform = `translate3d(-50%, ${pullDistance}px, 0)`; pullIndicator.style.opacity = Math.min(pullDistance / 60, 1);
         pullSvg.style.transform = `rotate(${pullDistance * 4}deg)`;
     }
-}, { passive: false }); // Важно для работы preventDefault на Android
+}, { passive: false });
+
 window.addEventListener('touchend', () => {
     isDragging = false; mouse.active = false; mouse.x = mouse.y = mouse.targetX = mouse.targetY = null;
     if (dragDirection === 'horizontal') {
@@ -142,10 +131,9 @@ window.addEventListener('touchend', () => {
     }
 });
 
-// ГАРАНТИРОВАННАЯ СМЕНА ПАЛИТРЫ ОТ КАЖДОГО КЛИКА НА ЗОНАХ БЕЗ СКРОЛЛА
 window.addEventListener('click', e => { 
     if (e.target.closest('.navigation-tabs') || e.target.closest('.lessons-list')) return; 
-    activePalette = null; ctx.clearRect(0, 0, canvas.width, canvas.height); selectRandomPalette(); 
+    activePalette = null; selectRandomPalette(); 
 });
 
 function switchScreen(index) {
@@ -206,17 +194,20 @@ function updateLogic() {
     if (isDisplayingToday && daysData[day]) {
         const todayLessons = daysData[day].lessons, firstLessonNum = Math.min(...Object.keys(todayLessons).map(Number)), firstLessonStart = parseTime(timeTable[firstLessonNum - 1].start);
         if (currentMinutes < firstLessonStart) {
-            currentStatusText = "До начала уроков"; let diff = firstLessonStart - currentMinutes; timeDiffText = `${Math.floor(diff / 60)}ч ${diff % 60}м`; subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
+            currentStatusText = "До начала уроков"; let diff = firstLessonStart - currentMinutes; 
+            // ИСПРАВЛЕНО: Умный вывод без 0 часов + точки в сокращениях (ч. и мин.)
+            timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)}ч. ${diff % 60}мин.` : `${diff}мин.`;
+            subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
         } else {
             for (let lNum of Object.keys(todayLessons).map(Number)) {
-                let tBox = timeTable[lNum - 1]; if (currentMinutes >= parseTime(tBox.start) && currentMinutes <= parseTime(tBox.end)) { activeLessonId = lNum; currentStatusText = `Идет ${lNum}-й урок`; timeDiffText = `${parseTime(tBox.end) - currentMinutes} мин`; subText = `До конца урока: ${todayLessons[lNum]}`; break; }
+                let tBox = timeTable[lNum - 1]; if (currentMinutes >= parseTime(tBox.start) && currentMinutes <= parseTime(tBox.end)) { activeLessonId = lNum; currentStatusText = `Идет ${lNum}-й урок`; timeDiffText = `${parseTime(tBox.end) - currentMinutes} мин.`; subText = `До конца урока: ${todayLessons[lNum]}`; break; }
             }
             if (!activeLessonId) {
                 const lessonsKeys = Object.keys(todayLessons).map(Number).sort();
                 for (let i = 0; i < lessonsKeys.length - 1; i++) {
                     let currEnd = parseTime(timeTable[lessonsKeys[i] - 1].end), nextStart = parseTime(timeTable[lessonsKeys[i+1] - 1].start);
                     if (currentMinutes > currEnd && currentMinutes < nextStart) {
-                        let diff = nextStart - currentMinutes; currentStatusText = "Идет перемена"; timeDiffText = `${diff} мин`; subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
+                        let diff = nextStart - currentMinutes; currentStatusText = "Идет перемена"; timeDiffText = `${diff} мин.`; subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
                         if (diff <= 2) tCard.classList.add('break-warning'); else tCard.classList.add('break-active'); break;
                     }
                 }
