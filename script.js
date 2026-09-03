@@ -74,8 +74,9 @@ function generateFluidBackground() {
         ctx.save(); let offsetX = (Math.random() - 0.5) * (canvas.width * 0.4); let offsetY = (Math.random() - 0.5) * (canvas.height * 0.4);
         let targetX = pos.x + offsetX; let targetY = pos.y + offsetY; let radius = Math.random() * (canvas.width * 0.8) + canvas.width * 0.4;
         let radialGrad = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
-        radialGrad.addColorStop(0, selected.colors[index] + '77'); radialGrad.addColorStop(0.5, selected.colors[index] + '22'); radialGrad.addColorStop(1, 'transparent');
-        ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        radialGrad.addColorStop(0, selected.colors[index] + (isDark ? '77' : 'ff')); 
+        radialGrad.addColorStop(0.5, selected.colors[index] + (isDark ? '22' : '55')); radialGrad.addColorStop(1, 'transparent');
+        ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply'; ctx.fillStyle = radialGrad; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     });
 }
 function buildMatrix() {
