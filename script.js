@@ -210,7 +210,7 @@ function updateLogic() {
                 for (let i = 0; i < lessonsKeys.length - 1; i++) {
                     let currEnd = parseTime(timeTable.find(t=>t.num===lessonsKeys[i]).end), nextStart = parseTime(timeTable.find(t=>t.num===lessonsKeys[i+1]).start);
                     if (currentMinutes > currEnd && currentMinutes < nextStart) {
-                        let totalSecsDiff = (nextStart * 60) - (currentMinutes * 60) - currentSecs);
+                        let totalSecsDiff = (nextStart * 60) - (currentMinutes * 60) - currentSecs;
                         let minsLeft = Math.ceil(totalSecsDiff / 60);
                         currentStatusText = "До конца перемены";
                         timeDiffText = totalSecsDiff < 60 ? `${totalSecsDiff} сек` : `${minsLeft} мин.`;
