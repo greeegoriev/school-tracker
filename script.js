@@ -210,16 +210,17 @@ function updateLogic() {
                 for (let i = 0; i < lessonsKeys.length - 1; i++) {
                     let currEnd = parseTime(timeTable.find(t=>t.num===lessonsKeys[i]).end), nextStart = parseTime(timeTable.find(t=>t.num===lessonsKeys[i+1]).start);
                     if (currentMinutes > currEnd && currentMinutes < nextStart) {
-                        let totalSecsDiff = (nextStart * 60) - (currentMinutes * 60 + currentSecs);
+                        let totalSecsDiff = (nextStart * 60) - (currentMinutes * 60) - currentSecs);
+                        let minsLeft = Math.ceil(totalSecsDiff / 60);
                         currentStatusText = "До конца перемены";
-                        timeDiffText = totalSecsDiff < 60 ? `${totalSecsDiff} сек` : `${nextStart - currentMinutes} мин.`;
+                        timeDiffText = totalSecsDiff < 60 ? `${totalSecsDiff} сек` : `${minsLeft} мин.`;
                         subText = `Следующий: ${todayLessons[lessonsKeys[i+1]]}`;
                         currentBreakTotal = nextStart - currEnd; currentBreakTimePassed = currentMinutes - currEnd; break;
                     }
                 }
             }
         }
-    } else { currentStatusText = "Уроки завершены"; timeDiffText = `<div class="cyber-rest-box"><div class="cyber-rest-status">ОТДЫХ</div></div>`; subText = `Следующий день: ${activeDayInfo.name}`; }
+    } else { currentStatusText = "Уроки завершены"; timeDiffText = `<div class="cyber-rest-box"><div class="cyber-rest-status">ЧИИИЛЛЛ!</div></div>`; subText = `Следующий день: ${activeDayInfo.name}`; }
     document.getElementById('timer-label').innerText = currentStatusText; document.getElementById('timer-time').innerHTML = timeDiffText; document.getElementById('timer-sub').innerText = subText;
     const activeLessonsKeys = Object.keys(activeDayInfo.lessons).map(Number).sort((a,b)=>a-b);
     for (let idx = 0; idx < activeLessonsKeys.length; idx++) {
