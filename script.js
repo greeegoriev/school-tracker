@@ -191,7 +191,7 @@ function updateLogic() {
             let totalSecsDiff = (firstLessonStart * 60) - (currentMinutes * 60 + currentSecs);
             currentStatusText = "До начала уроков"; 
             if (totalSecsDiff < 60) { timeDiffText = `${totalSecsDiff} сек`; }
-            else { let diff = firstLessonStart - currentMinutes; timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)} ч. ${diff % 60} min.` : `${diff} мин.`; }
+            else { let diff = firstLessonStart - currentMinutes; timeDiffText = diff >= 60 ? `${Math.floor(diff / 60)} ч. ${diff % 60} мин.` : `${diff} мин.`; }
             subText = `Первый урок: ${todayLessons[firstLessonNum]}`;
         } else {
             for (let lNum of Object.keys(todayLessons).map(Number)) {
