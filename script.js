@@ -1,5 +1,5 @@
 let currentUser = 0;
-/*const allPalettes = [
+const allPalettes = [
     { base: '#040209', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] },
     { base: '#01030d', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] },
     { base: '#010501', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] },
@@ -8,31 +8,13 @@ let currentUser = 0;
     { base: '#06010a', colors: ['#b92b27', '#1565c0', '#7000ff', '#ff007f'] },
     { base: '#030303', colors: ['#ea00d9', '#711c91', '#0abdc6', '#091833'] },
     { base: '#05020c', colors: ['#fe5f75', '#fc9842', '#ff0055', '#7a00ff'] },
-    { base: '#010604', colors: ['#00ffcc', '#38ef7d', '#11998e', '#00f6ff'] },
-    { base: '#040209', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] },
+    { base: '#010604', colors: ['#00ffcc', '#38ef7d', '#11998e', '#00f6ff'] }
+    /* { base: '#040209', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] }, 
     { base: '#040209', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] },
     { base: '#040209', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] },
     { base: '#040209', colors: ['#11998e', '#38ef7d', '#00ffcc', '#0072ff'] },
-    { base: '#040209', colors: ['#7f00ff', '#ff007f', '#ff0055', '#9900ff'] }
+    { base: '#040209', colors: ['#7f00ff', '#ff007f', '#ff0055', '#9900ff'] } */
 ];
-*/
-const allPalettes = [
-  { base: '#fff0f5', colors: ['#ff0055', '#00ffcc', '#9900ff', '#ffaa00'] }, // Розоватый
-  { base: '#f0f8ff', colors: ['#0072ff', '#00f6ff', '#7000ff', '#ff00aa'] }, // Голубоватый
-  { base: '#f0fff4', colors: ['#00ff66', '#a8ff78', '#78ffd6', '#0052d4'] }, // Мятный
-  { base: '#fffaf0', colors: ['#ff3300', '#ff0055', '#ffcc00', '#9900ff'] }, // Теплый белый
-  { base: '#f0faff', colors: ['#00f2fe', '#4facfe', '#3b82f6', '#00ffcc'] },
-  { base: '#fff0f0', colors: ['#b92b27', '#1565c0', '#7000ff', '#ff007f'] },
-  { base: '#fcf0ff', colors: ['#ea00d9', '#711c91', '#0abdc6', '#00d2ff'] },
-  { base: '#fff5f5', colors: ['#fe5f75', '#fc9842', '#ff0055', '#7a00ff'] },
-  { base: '#f0fff9', colors: ['#00ffcc', '#38ef7d', '#11998e', '#00f6ff'] },
-  { base: '#fff0f5', colors: ['#ff0055', '#38ef7d', '#0072ff', '#ffaa00'] },
-  { base: '#f0ffff', colors: ['#00f6ff', '#ff007f', '#7000ff', '#00ffcc'] },
-  { base: '#fff7f0', colors: ['#ff5e00', '#ff0055', '#ffcc00', '#ff00ff'] },
-  { base: '#f0fff9', colors: ['#11998e', '#38ef7d', '#00ffcc', '#0072ff'] },
-  { base: '#fdf0ff', colors: ['#7f00ff', '#ff007f', '#ff0055', '#9900ff'] }
-];
-
 
 const timeTable = [
     { num: 0, start: "08:00", end: "08:25" },
