@@ -225,7 +225,8 @@ html {
     margin: 12px auto;
 }
 .cyber-rest-status {
-    font-family: "JetBrains Mono", monospace;
+    font-family: "Unbounded", sans-serif;
+    /*font-family: "JetBrains Mono", monospace;*/
     font-size: 38px;
     font-weight: 900;
     text-transform: uppercase;
